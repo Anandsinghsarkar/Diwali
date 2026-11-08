@@ -551,23 +551,23 @@ export default function Live({ onExit }) {
   const live = status === 'live'
   const couple = live && roomMode === 'couple'
 
-  const toggleDiya = i => { if (live) { const next = diyas.map((x, j) => j === i ? !x : x); set(ref(db, 'diwaliRooms/' + cfg.room + '/state/diyas'), next).catch(e => setFirebaseError(e.message)); send({ t: 'diya', i, v: next[i] }) } else setDiyas(a => a.map((x, j) => j === i ? !x : x)) }
-  const allDiya = v => { if (live) { const next = Array(N_DIYA).fill(v); set(ref(db, 'diwaliRooms/' + cfg.room + '/state/diyas'), next).catch(e => setFirebaseError(e.message)); send({ t: 'diyaAll', v }) } else setDiyas(Array(N_DIYA).fill(v)) }
+  const toggleDiya = i => { if (cfg && firebaseUid) { const next = diyas.map((x, j) => j === i ? !x : x); set(ref(db, 'diwaliRooms/' + cfg.room + '/state/diyas'), next).catch(e => setFirebaseError(e.message)); if (live) send({ t: 'diya', i, v: next[i] }) } else setDiyas(a => a.map((x, j) => j === i ? !x : x)) }
+  const allDiya = v => { if (cfg && firebaseUid) { const next = Array(N_DIYA).fill(v); set(ref(db, 'diwaliRooms/' + cfg.room + '/state/diyas'), next).catch(e => setFirebaseError(e.message)); if (live) send({ t: 'diyaAll', v }) } else setDiyas(Array(N_DIYA).fill(v)) }
   const join = () => { const n = name.trim(); if (!n) return; localStorage.setItem('dv-name', n); setMsgs([]); setRoomMode(mode); setCfg({ room: clean(roomIn) || genRoom(), name: n.slice(0, 20), mode, n: Date.now() }) }
   const leave = () => { setCfg(null); setSolo(true); setMsgs([]) }
   const invite = () => {
     const url = `${location.origin}${location.pathname}#live?room=${cfg.room}&mode=${roomMode}`
     navigator.clipboard?.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) }).catch(() => {})
   }
-  const showLobby = (!cfg && !solo) || !!err
+  const showLobby = (!cfg && !solo) || (!!err && !firebaseUid)
 
   return <div className="lv">
     <header className="lv-top">
       <button className="lv-brand" onClick={onExit}>← <span>🪔 Diwali<b>Live</b></span></button>
       <nav className="lv-tabs">{[['diya', 'Diya'], ['rangoli', 'Rangoli'], ['fw', 'Crackers']].map(([id, l]) => <button key={id} className={'lv-tab' + (tab === id ? ' on' : '')} onClick={() => setTab(id)}>{l}</button>)}</nav>
       <div className="lv-right">
-        <span className={'lv-pill' + (live ? ' on' : '')}>{live ? `● ${users.length} online${couple ? ' · couple' : ''}` : cfg ? (fails >= 2 ? 'server unreachable' : status) : 'solo'}</span>
-        {live && <button className="lv-btn" onClick={invite}>{copied ? 'copied ✓' : 'invite link'}</button>}
+        <span className={'lv-pill' + (live ? ' on' : '')}>{live ? `● ${users.length} online${couple ? ' · couple' : ''}` : cfg ? (firebaseUid ? 'Firebase room · effects server offline' : (fails >= 2 ? 'server unreachable' : status)) : 'solo'}</span>
+        {cfg && firebaseUid && <button className="lv-btn" onClick={invite}>{copied ? 'copied ✓' : 'invite link'}</button>}
         {!cfg && <button className="lv-btn gold" onClick={() => setSolo(false)}>join room</button>}
         {cfg && <button className="lv-btn" onClick={leave}>leave</button>}
         <button className="lv-btn lv-chat-toggle" onClick={() => setChatOpen(v => !v)}>chat</button>
@@ -579,7 +579,7 @@ export default function Live({ onExit }) {
         {tab === 'rangoli' && <Rangoli send={send} live={live} stampsRef={stampsRef} sub={sub} />}
         {tab === 'fw' && <Fireworks send={send} sub={sub} couple={couple} />}
       </main>
-      <Side users={users} me={me} firebaseUid={firebaseUid} msgs={msgs} live={live && !!firebaseUid} send={sendLive} couple={couple} room={cfg?.room} open={chatOpen} onClose={() => setChatOpen(false)} onClearChat={clearChat} />
+      <Side users={users} me={me} firebaseUid={firebaseUid} msgs={msgs} live={!!cfg && !!firebaseUid} send={sendLive} couple={couple} room={cfg?.room} open={chatOpen} onClose={() => setChatOpen(false)} onClearChat={clearChat} />
     </div>
     {showLobby && <Lobby name={name} setName={setName} room={roomIn} setRoom={setRoomIn} mode={mode} setMode={setMode} onJoin={join} onSolo={() => setSolo(true)} err={err} />}
     {firebaseError && <div className="lv-warn">{firebaseError}</div>}{cfg && !live && fails >= 2 && !err && <div className="lv-warn">can't reach the live server. run <code>npm run server</code> or set VITE_WS_URL.</div>}
