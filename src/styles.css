@@ -24,3 +24,9 @@
 .theme-rose{--gold:#ff8fa9;--gold2:#ffd1dc;--line:rgba(255,143,169,.2)}
 .theme-emerald{--gold:#75d7b2;--gold2:#c4ffe8;--line:rgba(117,215,178,.2)}
 @media(max-width:760px){.night-sky-card{padding:38px 22px;min-height:520px;align-items:flex-end}.night-moon{right:8%;top:4%;font-size:110px}.night-sky-content{padding-bottom:20px}.night-sky-content form{flex-direction:column}.night-sky-content form .btn{width:100%}.firework-options{gap:7px}.fireworks-overlay .firework-options{max-width:280px}}
+
+
+.magic-cursor-spark{position:fixed;z-index:9999;pointer-events:none;color:var(--gold,#edbd68);font-size:13px;text-shadow:0 0 12px currentColor;animation:magicSpark .75s ease-out forwards}
+@keyframes magicSpark{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-30px) scale(1.5)}}
+@media(pointer:coarse){.magic-cursor-spark{display:none}}
+@media(prefers-reduced-motion:reduce){.magic-cursor-spark{display:none}}
