@@ -349,7 +349,7 @@ function App() {
       <nav className="desktop-nav">{nav}</nav>
       <div className="top-actions"><button className="icon-btn" title="Toggle theme" onClick={()=>setDark(v=>!v)}>{dark?<Sun size={18}/>:<Moon size={18}/>}</button><button className="icon-btn" title="Toggle sound" onClick={()=>setSoundOn(v=>!v)}>{soundOn?<Volume2 size={18}/>:<VolumeX size={18}/>}</button><button className="icon-btn" title="Change festive theme" onClick={cycleTheme}><Palette size={18}/></button><button className="icon-btn" title="Fullscreen" onClick={toggleFullscreen}><Maximize2 size={17}/></button><button className="mobile-menu-btn" onClick={()=>setMobileMenu(v=>!v)}>{mobileMenu?<X/>:<Menu/>}</button></div>
     </header>
-    {mobileMenu&&<div className="mobile-nav">{nav}</div>}
+    {mobileMenu&&<><button className="menu-backdrop" aria-label="Close menu" onClick={()=>setMobileMenu(false)}/><div className="mobile-nav"><div className="mobile-nav-heading"><b>Explore DiwaliVerse</b><small>All features in one place</small></div><a className="nav-link live-menu-link" href="#live" onClick={()=>setMobileMenu(false)}><Heart size={16}/><span>Live Together</span></a>{nav}</div></>}
     <main>
       {active==='home'&&<><section className="hero">
         <div className="hero-stars">✦　　　·　　 ✧　　　 ·　　　✦</div><div className="hero-content"><div className="eyebrow"><span className="live-dot"/> A LITTLE MAGIC. A LOT OF LIGHT.</div><h1>Let there be<br/><em>light.</em></h1><p>Step into a world of glowing diyas, sparkling skies and beautiful moments. Your celebration starts here.</p><div className="button-row"><button className="btn btn-gold" onClick={()=>go('fireworks')}><Sparkles size={17}/> Enter celebration <ChevronRight size={17}/></button><button className="btn btn-glass" onClick={()=>go('diyas')}><Flame size={17}/> Light a diya</button></div><div className="hero-footnote"><span>✦</span> MADE FOR MOMENTS THAT SHINE <span>✦</span></div></div>
@@ -374,6 +374,7 @@ function App() {
       {active==='night'&&<section className="page-section"><PageTitle eyebrow="A QUIET MOMENT OF MAGIC" title="Interactive" accent="Night Sky" desc="Add a wish to your own little universe of stars."/><NightSky/></section>}
       {active==='surprise'&&<section className="page-section"><PageTitle eyebrow="A GIFT OF GOOD VIBES" title="Surprise" accent="Zone" desc="A small surprise, wrapped with festive wishes."/><SurpriseZone/></section>}
     </main>
+    <nav className="mobile-bottom-nav" aria-label="Main navigation"><button className={active==='home'?'selected':''} onClick={()=>go('home')}><House size={19}/><span>Home</span></button><a href="#live"><Heart size={19}/><span>Live Together</span></a><button className={mobileMenu?'selected':''} onClick={()=>{setMobileMenu(v=>!v);window.scrollTo({top:0,behavior:'smooth'})}}><Menu size={19}/><span>All Features</span></button></nav>
     <footer className="footer"><div className="footer-brand">🪔 Diwali<span>Verse</span></div><p>A little magic. A lot of light. Made to celebrate together.</p><div className="footer-links">{sections.slice(1,6).map(([l,id])=><button key={id} onClick={()=>go(id)}>{l}</button>)}</div><small>© {new Date().getFullYear()} DiwaliVerse · A digital celebration of light</small></footer>
   </div>
 }
