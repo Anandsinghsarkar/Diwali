@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 
 const sections = [
-  ['Home', 'home', Sparkles], ['Fireworks', 'fireworks', PartyPopper], ['Virtual Crackers', 'crackers', Stars],
+  ['Home', 'home', Sparkles], ['Fireworks', 'fireworks', PartyPopper], ['Virtual Crackers', 'crackers', Stars], ['Gifts & Cards', 'gifts', Gift], ['Love & Friends Chat', 'chat', Heart],
   ['Diya World', 'diyas', Flame], ['Rangoli Studio', 'rangoli', Palette],
   ['Home Decor', 'decor', House], ['Greeting Maker', 'greetings', Gift],
   ['Photo Booth', 'photo', Camera], ['Games', 'games', Gamepad2],
@@ -144,31 +144,38 @@ const crackerShowcase = [
   {id:'spark-rain',name:'Spark Rain',emoji:'🌠',kind:'Falling glitter',description:'A gentle shower of tiny lights drifts downward like glittering rain against the night sky.',motion:'rain',color:'#ffad83',fact:'Many small lights drift down and fade out.'}
 ];
 function VirtualCrackers(){
-  const [selected,setSelected]=useState('sparkler');
-  const [playing,setPlaying]=useState(false);
-  const [reduced,setReduced]=useState(false);
-  const item=crackerShowcase.find(x=>x.id===selected)||crackerShowcase[0];
-  const replay=()=>{setPlaying(false);requestAnimationFrame(()=>requestAnimationFrame(()=>setPlaying(true)))};
-  return <div className="cracker-lab">
-    <div className="cracker-lab-head"><div><span className="eyebrow">TOUCH · EXPLORE · LEARN</span><h2>A safer way to explore <em>the sparkle.</em></h2><p>Choose a virtual firework card to see a stylized animation and learn what its visual effect looks like.</p></div><div className="safety-chip">✦ DIGITAL SIMULATION ONLY</div></div>
-    <div className="cracker-lab-grid">
-      <div className="cracker-catalog">{crackerShowcase.map(c=><button key={c.id} onClick={()=>{setSelected(c.id);setPlaying(true)}} className={selected===c.id?'cracker-tile selected':'cracker-tile'}><span>{c.emoji}</span><b>{c.name}</b><small>{c.kind}</small><i>Explore effect ↗</i></button>)}</div>
-      <div className="cracker-detail">
-        <div className={'cracker-stage '+item.motion+(playing?' playing':'')} style={{'--cracker-color':item.color}}>
-          <div className="stage-stars">✦　·　✧　　　·　✦　　✧</div><div className="stage-moon">☾</div>
-          <div className="effect-core"><span className="effect-ring"/><span className="effect-burst">✦</span><span className="effect-trail">✧</span></div>
-          <div className="stage-ground"/>
-          <span className="stage-caption">{item.kind.toUpperCase()} · VIRTUAL EFFECT</span>
-        </div>
-        <div className="cracker-info"><div><span className="eyebrow">SELECTED EXPERIENCE</span><h3>{item.emoji} {item.name}</h3><p>{item.description}</p></div><button className="btn btn-gold" onClick={replay}><RotateCcw size={16}/> Replay animation</button></div>
-        <div className="cracker-fact"><span>✦ WHAT YOU'RE SEEING</span><b>{item.fact}</b></div>
-      </div>
-    </div>
-    <div className="cracker-learning"><div><span className="eyebrow">HOW TO UNDERSTAND THE EFFECT</span><h3>Light, motion and a little science.</h3><p>Real fireworks create light and sound through carefully controlled chemical reactions. This website does not reproduce those reactions or explain how to make or ignite fireworks. It uses browser-drawn particles, color, timing and motion to demonstrate the appearance only.</p></div><div className="learning-points"><span>01 <b>Glow</b><small>Brightness changes over time.</small></span><span>02 <b>Motion</b><small>Particles follow animated paths.</small></span><span>03 <b>Fade</b><small>Light gently disappears.</small></span></div></div>
-    <div className="cracker-footnote">Please enjoy fireworks through screen simulations or professionally managed public displays. Never handle or light fireworks yourself.</div>
-  </div>
+ const canvasRef=useRef(null),[selected,setSelected]=useState('sparkler'),[playing,setPlaying]=useState(true),[color,setColor]=useState('rainbow');
+ const item=crackerShowcase.find(x=>x.id===selected)||crackerShowcase[0];
+ useEffect(()=>{
+  const c=canvasRef.current,ctx=c&&c.getContext('2d');if(!ctx)return;let raf=0,last=0,elapsed=0,parts=[],dpr=1;
+  const resize=()=>{dpr=Math.min(devicePixelRatio||1,1.5);c.width=Math.round(c.clientWidth*dpr);c.height=Math.round(c.clientHeight*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)};resize();window.addEventListener('resize',resize);
+  const W=()=>c.clientWidth,H=()=>c.clientHeight;
+  const hue=()=>color==='gold'?42:color==='blue'?205:color==='pink'?325:color==='green'?150:Math.random()*360;
+  const add=(x,y,vx,vy)=>parts.push({x,y,vx,vy,life:1,decay:.008+Math.random()*.008,h:hue(),r:1+Math.random()*2});
+  const bloom=(x,y,n,heart=false)=>{for(let i=0;i<n;i++){let t=i/n*Math.PI*2,vx=Math.cos(t),vy=Math.sin(t);if(heart){vx=16*Math.pow(Math.sin(t),3)/16;vy=-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))/13}add(x,y,vx*(1+Math.random()*3),vy*(1+Math.random()*3))}};
+  const draw=t=>{let w=W(),h=H(),cx=w/2,cy=h*.5;ctx.fillStyle='rgba(5,8,24,.22)';ctx.fillRect(0,0,w,h);elapsed+=t-(last||t);last=t;
+   if(playing&&elapsed>1500){elapsed=0;parts=[]}
+   if(playing&&elapsed<45){
+    if(selected==='sparkler'){for(let i=0;i<90;i++)add(cx+(Math.random()-.5)*24,cy+(Math.random()-.5)*24,(Math.random()-.5)*4,(Math.random()-.5)*4)}
+    if(selected==='fountain'||selected==='flowerpot'){for(let i=0;i<120;i++){let an=-Math.PI*.9+Math.random()*Math.PI*.8,sp=1+Math.random()*4;add(cx,h*.84,Math.cos(an)*sp,Math.sin(an)*sp)}}
+    if(selected==='spinner'||selected==='ground'){for(let i=0;i<110;i++){let an=i/110*Math.PI*2;add(cx+Math.cos(an)*55,cy+Math.sin(an)*20,-Math.sin(an)*2,Math.cos(an)*2)}}
+    if(selected==='rocket'){for(let i=0;i<90;i++)add(cx+(Math.random()-.5)*12,h*.8-Math.random()*h*.55,(Math.random()-.5)*.6,-1-Math.random()*2);}
+    if(selected==='aerial')bloom(cx,cy,125);
+    if(selected==='spark-rain'){for(let i=0;i<120;i++)add(Math.random()*w,Math.random()*h*.65,(Math.random()-.5)*.4,.8+Math.random()*2)}
+   }
+   if(selected==='fountain'||selected==='flowerpot'){ctx.strokeStyle='rgba(255,210,120,.35)';ctx.beginPath();ctx.moveTo(cx,h*.85);ctx.lineTo(cx-100,h*.28);ctx.moveTo(cx,h*.85);ctx.lineTo(cx+100,h*.28);ctx.stroke()}
+   if(selected==='spinner'||selected==='ground'){ctx.save();ctx.translate(cx,cy);ctx.rotate(t*.0018);ctx.strokeStyle='#8deaff';ctx.lineWidth=3;ctx.shadowBlur=16;ctx.shadowColor='#8deaff';ctx.beginPath();ctx.ellipse(0,0,78,26,0,0,Math.PI*2);ctx.stroke();ctx.restore()}
+   if(selected==='rocket'){ctx.fillStyle='#fff2c4';ctx.font='26px sans-serif';ctx.fillText('✦',cx-8,h*.17)}
+   parts=parts.filter(p=>p.life>0&&p.y<h+20);for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vy+=selected==='spark-rain'?.01:.02;p.life-=p.decay;ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle='hsl('+p.h+' 100% 68%)';ctx.shadowBlur=10;ctx.shadowColor=ctx.fillStyle;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1;ctx.shadowBlur=0;raf=requestAnimationFrame(draw)};
+  ctx.fillStyle='#060a20';ctx.fillRect(0,0,W(),H());raf=requestAnimationFrame(draw);return()=>{cancelAnimationFrame(raf);window.removeEventListener('resize',resize)};
+ },[selected,playing,color]);
+ const choose=id=>{setSelected(id);setPlaying(false);requestAnimationFrame(()=>requestAnimationFrame(()=>setPlaying(true)))};
+ const descriptions={sparkler:'A close-up field of fine sparkling points.',fountain:'A wide fan of light moving upward.',spinner:'A rotating elliptical halo.',rocket:'A rising streak with a star-like finish.',flowerpot:'A short, flower-shaped upward spray.',aerial:'A wide radial sky bloom.',ground:'A low circular spinning pattern.','spark-rain':'A field of gently falling points.'};
+ return <div className='cracker-lab'><div className='cracker-lab-head'><div><span className='eyebrow'>TOUCH · EXPLORE · LEARN</span><h2>Every sparkle has its <em>own motion.</em></h2><p>Each card uses a different browser-drawn visual simulation.</p></div><div className='safety-chip'>✦ DIGITAL SIMULATION ONLY</div></div>
+ <div className='cracker-catalog'>{crackerShowcase.map(c=><button key={c.id} onClick={()=>choose(c.id)} className={selected===c.id?'cracker-tile selected':'cracker-tile'}><span>{c.emoji}</span><b>{c.name}</b><small>{c.kind}</small><i>View animation ↗</i></button>)}</div>
+ <div className='cracker-detail'><canvas ref={canvasRef} className='cracker-canvas' aria-label={item.name+' simulation'}/><div className='cracker-info'><div><span className='eyebrow'>NOW PREVIEWING</span><h3>{item.emoji} {item.name}</h3><p>{descriptions[selected]} {item.description}</p></div><div className='cracker-actions'><label>Color <select value={color} onChange={e=>setColor(e.target.value)}><option value='rainbow'>Rainbow</option><option value='gold'>Gold</option><option value='blue'>Blue</option><option value='pink'>Pink</option><option value='green'>Emerald</option></select></label><button className='btn btn-gold' onClick={()=>{setPlaying(false);requestAnimationFrame(()=>requestAnimationFrame(()=>setPlaying(true)))}}><RotateCcw size={16}/> Replay</button></div></div><div className='cracker-fact'><span>✦ VISUAL CHARACTER</span><b>{item.fact}</b></div></div>
+ <div className='cracker-footnote'>Digital effects only. Real fireworks should only be handled by trained professionals at approved displays.</div></div>
 }
-
 function DiyaCard({ lit, onClick, index }) {
   return <button className={`diya-card ${lit?'is-lit':''}`} onClick={onClick} aria-pressed={lit}>
     <div className="diya-glow"/>
