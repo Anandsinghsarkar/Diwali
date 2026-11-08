@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { db, ensureGuest, ref, onValue, push, remove, set } from '../firebase.js'
 
 const WS_URL = import.meta.env.VITE_WS_URL || `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:8787`
 const N_DIYA = 7
@@ -10,7 +11,7 @@ const rnd = (a, b) => a + Math.random() * (b - a)
 const pick = a => a[(Math.random() * a.length) | 0]
 const mulberry32 = a => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
 const clean = s => String(s || '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 24)
-const genRoom = () => 'DIWALI-' + Math.random().toString(36).slice(2, 6).toUpperCase()
+const genRoom = () => 'DIWALI-' + Math.random().toString(36).slice(2, 10).toUpperCase()
 const timeOf = at => new Date(at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
 
 function fit(c, ctx) {
@@ -461,20 +462,20 @@ function Fireworks({ send, sub, couple }) {
 }
 
 /* ───────────── chat (memory only — refresh wipes it) ───────────── */
-function Side({ users, me, msgs, live, send, couple, room, open, onClose }) {
+function Side({ users, me, firebaseUid, msgs, live, send, couple, room, open, onClose, onClearChat }) {
   const [d, setD] = useState(''), end = useRef(null)
   useEffect(() => { end.current?.scrollIntoView({ block: 'end' }) }, [msgs, open])
   const go = (text, kind) => { const t = (text ?? d).trim(); if (!t || !live) return; send({ t: 'chat', text: t, kind }); if (text == null) setD('') }
   const quick = couple ? ['💗 thinking of you', '🪔 light yours too', '✨ look at the sky'] : ['🪔 Shubh Deepawali!', '✨ look at the sky', '🎆 more crackers!']
   return <aside className={'lv-side' + (open ? ' open' : '')}>
-    <div className="lv-side-head"><b>{couple ? 'Just us' : 'In this room'}</b><span>{room || 'solo'}</span><button className="lv-btn lv-x" onClick={onClose}>✕</button></div>
+    <div className="lv-side-head"><b>{couple ? 'Just us' : 'In this room'}</b><span>{room || 'solo'}</span><button className="lv-btn" onClick={onClearChat} disabled={!live || !msgs.length}>Clear</button><button className="lv-btn lv-x" onClick={onClose}>✕</button></div>
     <div className="lv-people">{users.length ? users.map(u => <span key={u.id} className="lv-chip" style={{ '--h': u.hue }}><i>{(u.name[0] || '?').toUpperCase()}</i>{u.name}{u.id === me ? ' (you)' : ''}</span>) : <small>You are playing solo. Join a room to play together.</small>}</div>
     <div className="lv-msgs">{msgs.map(m => m.kind === 'sys'
       ? <div key={m.id} className="lv-sys">{m.name} {m.text}</div>
-      : <div key={m.id} className={'lv-msg' + (m.from === me ? ' me' : '') + (m.kind === 'love' ? ' love' : '')}><small>{m.from === me ? 'You' : m.name} · {timeOf(m.at)}</small><p>{m.text}</p></div>)}<div ref={end} /></div>
+      : <div key={m.id} className={'lv-msg' + (m.from === firebaseUid ? ' me' : '') + (m.kind === 'love' ? ' love' : '')}><small>{m.from === firebaseUid ? 'You' : m.name} · {timeOf(m.at)}</small><p>{m.text}</p></div>)}<div ref={end} /></div>
     <div className="lv-quick">{quick.map(q => <button key={q} disabled={!live} onClick={() => go(q, couple ? 'love' : 'msg')}>{q}</button>)}</div>
     <form className="lv-compose" onSubmit={e => { e.preventDefault(); go() }}><input value={d} maxLength={400} onChange={e => setD(e.target.value)} placeholder={live ? 'say something…' : 'join a room to chat'} disabled={!live} /><button disabled={!live || !d.trim()}>Send</button></form>
-    <p className="lv-note">Chat is kept in memory only. Refresh and it's gone.</p>
+    <p className="lv-note">Firebase real-time chat · Clear removes messages for everyone in this room.</p>
   </aside>
 }
 
@@ -505,6 +506,8 @@ export default function Live({ onExit }) {
   const [chatOpen, setChatOpen] = useState(false)
   const [diyas, setDiyas] = useState(() => Array(N_DIYA).fill(false))
   const [msgs, setMsgs] = useState([])
+  const [firebaseUid, setFirebaseUid] = useState('')
+  const [firebaseError, setFirebaseError] = useState('')
   const [copied, setCopied] = useState(false)
   const stampsRef = useRef([]), subs = useRef(new Set())
   const sub = useCallback(fn => { subs.current.add(fn); return () => subs.current.delete(fn) }, [])
@@ -518,11 +521,39 @@ export default function Live({ onExit }) {
     subs.current.forEach(fn => fn(m))
   }, [])
   const { status, users, me, err, fails, send } = useRoom(cfg, onMsg)
+  useEffect(() => {
+    let active = true
+    ensureGuest().then(user => { if (active) setFirebaseUid(user.uid) }).catch(e => { if (active) setFirebaseError('Firebase sign-in failed: ' + e.message) })
+    return () => { active = false }
+  }, [])
+  useEffect(() => {
+    if (!cfg || !firebaseUid) return
+    const messagesRef = ref(db, 'diwaliRooms/' + cfg.room + '/messages')
+    const stop = onValue(messagesRef, snap => {
+      const value = snap.val() || {}
+      setMsgs(Object.entries(value).map(([id, m]) => ({ ...m, id })).sort((a, b) => a.at - b.at).slice(-300))
+    }, e => setFirebaseError('Chat sync error: ' + e.message))
+    const stateRef = ref(db, 'diwaliRooms/' + cfg.room + '/state/diyas')
+    const stopState = onValue(stateRef, snap => { if (snap.exists() && Array.isArray(snap.val())) setDiyas(snap.val()) })
+    return () => { stop(); stopState() }
+  }, [cfg?.room, firebaseUid])
+  const sendLive = useCallback(message => {
+    if (message?.t === 'chat') {
+      if (!cfg || !firebaseUid) { setFirebaseError('Firebase is connecting. Please try again.'); return }
+      const text = String(message.text || '').trim().slice(0, 400)
+      if (text) push(ref(db, 'diwaliRooms/' + cfg.room + '/messages'), { from: firebaseUid, name: name.trim().slice(0, 20) || 'Friend', text, kind: message.kind === 'love' ? 'love' : 'msg', at: Date.now() }).catch(e => setFirebaseError('Message could not be sent: ' + e.message))
+      return
+    }
+    send(message)
+  }, [cfg, firebaseUid, name, send])
+  const clearChat = useCallback(() => {
+    if (cfg && firebaseUid && window.confirm('Clear every message in this room for everyone?')) remove(ref(db, 'diwaliRooms/' + cfg.room + '/messages')).catch(e => setFirebaseError('Could not clear chat: ' + e.message))
+  }, [cfg, firebaseUid])
   const live = status === 'live'
   const couple = live && roomMode === 'couple'
 
-  const toggleDiya = i => { if (live) send({ t: 'diya', i, v: !diyas[i] }); else setDiyas(a => a.map((x, j) => j === i ? !x : x)) }
-  const allDiya = v => { if (live) send({ t: 'diyaAll', v }); else setDiyas(Array(N_DIYA).fill(v)) }
+  const toggleDiya = i => { if (live) { const next = diyas.map((x, j) => j === i ? !x : x); set(ref(db, 'diwaliRooms/' + cfg.room + '/state/diyas'), next).catch(e => setFirebaseError(e.message)); send({ t: 'diya', i, v: next[i] }) } else setDiyas(a => a.map((x, j) => j === i ? !x : x)) }
+  const allDiya = v => { if (live) { const next = Array(N_DIYA).fill(v); set(ref(db, 'diwaliRooms/' + cfg.room + '/state/diyas'), next).catch(e => setFirebaseError(e.message)); send({ t: 'diyaAll', v }) } else setDiyas(Array(N_DIYA).fill(v)) }
   const join = () => { const n = name.trim(); if (!n) return; localStorage.setItem('dv-name', n); setMsgs([]); setRoomMode(mode); setCfg({ room: clean(roomIn) || genRoom(), name: n.slice(0, 20), mode, n: Date.now() }) }
   const leave = () => { setCfg(null); setSolo(true); setMsgs([]) }
   const invite = () => {
@@ -549,9 +580,9 @@ export default function Live({ onExit }) {
         {tab === 'rangoli' && <Rangoli send={send} live={live} stampsRef={stampsRef} sub={sub} />}
         {tab === 'fw' && <Fireworks send={send} sub={sub} couple={couple} />}
       </main>
-      <Side users={users} me={me} msgs={msgs} live={live} send={send} couple={couple} room={cfg?.room} open={chatOpen} onClose={() => setChatOpen(false)} />
+      <Side users={users} me={me} firebaseUid={firebaseUid} msgs={msgs} live={live && !!firebaseUid} send={sendLive} couple={couple} room={cfg?.room} open={chatOpen} onClose={() => setChatOpen(false)} onClearChat={clearChat} />
     </div>
     {showLobby && <Lobby name={name} setName={setName} room={roomIn} setRoom={setRoomIn} mode={mode} setMode={setMode} onJoin={join} onSolo={() => setSolo(true)} err={err} />}
-    {cfg && !live && fails >= 2 && !err && <div className="lv-warn">can't reach the server. run <code>npm run server</code> or set VITE_WS_URL.</div>}
+    {firebaseError && <div className="lv-warn">{firebaseError}</div>}{cfg && !live && fails >= 2 && !err && <div className="lv-warn">can't reach the live server. run <code>npm run server</code> or set VITE_WS_URL.</div>}
   </div>
 }
