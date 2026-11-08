@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { db, ensureGuest, firebaseReady, ref, onValue, push, remove, set } from '../firebase.js'
+import { db, ensureGuest, firebaseReady, ref, onValue, push, remove, set, onDisconnect, onChildAdded, query, limitToLast } from '../firebase.js'
 
-const WS_URL = import.meta.env.VITE_WS_URL || `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:8787`
 const N_DIYA = 12
 const PALETTE = ['#ff9d0a', '#e8321e', '#d81b78', '#f4efe4', '#2aa84a', '#2f6fe0', '#ffd21f', '#7a3fc0']
 const FLOOR = '#1a141c'
@@ -22,41 +21,90 @@ function fit(c, ctx) {
   return [W, H]
 }
 
-/* ───────────── network ───────────── */
+/* ───────────── Firebase room network ───────────── */
 function useRoom(cfg, onMsg) {
   const [status, setStatus] = useState('idle')
   const [users, setUsers] = useState([])
   const [me, setMe] = useState(null)
   const [err, setErr] = useState('')
   const [fails, setFails] = useState(0)
-  const ws = useRef(null)
   const cb = useRef(onMsg); cb.current = onMsg
+
   useEffect(() => {
-    setErr(''); setFails(0)
-    if (!cfg) { setStatus('idle'); setUsers([]); setMe(null); return }
-    let stop = false, tries = 0, timer, cur
-    const open = () => {
-      setStatus(tries ? 'reconnecting' : 'connecting')
-      try { cur = new WebSocket(WS_URL) } catch { setErr('bad server url'); return }
-      const s = cur; ws.current = s
-      s.onopen = () => s.send(JSON.stringify({ t: 'join', room: cfg.room, name: cfg.name, mode: cfg.mode }))
-      s.onmessage = ev => {
-        let m; try { m = JSON.parse(ev.data) } catch { return }
-        if (m.t === 'init') { tries = 0; setFails(0); setStatus('live'); setMe(m.id); setUsers(m.users) }
-        else if (m.t === 'users') setUsers(m.users)
-        else if (m.t === 'error') { stop = true; setErr(m.msg) }
-        cb.current(m)
-      }
-      s.onclose = () => {
-        if (stop) { setStatus('idle'); return }
-        tries++; setFails(tries); setStatus('reconnecting')
-        timer = setTimeout(open, Math.min(800 * 2 ** tries, 8000))
+    if (!cfg || !firebaseReady || !db) {
+      setStatus('idle'); setUsers([]); setMe(null)
+      return
+    }
+    let active = true
+    setErr(''); setFails(0); setStatus('connecting')
+    const base = 'diwaliRooms/' + cfg.room
+    const myPresence = ref(db, base + '/presence/' + cfg.uid)
+    const presenceList = ref(db, base + '/presence')
+    const rangoliEvents = query(ref(db, base + '/rangoliEvents'), limitToLast(250))
+    const fireworksEvents = query(ref(db, base + '/fireworks'), limitToLast(8))
+    let stopUsers = () => {}, stopRangoli = () => {}, stopFireworks = () => {}
+
+    const connect = async () => {
+      try {
+        await set(myPresence, { id: cfg.uid, name: cfg.name, mode: cfg.mode, joinedAt: Date.now() })
+        await onDisconnect(myPresence).remove()
+        if (!active) { remove(myPresence).catch(() => {}); return }
+        setMe(cfg.uid)
+        setStatus('live')
+      } catch (e) {
+        if (active) { setStatus('idle'); setErr('Firebase room connection failed: ' + e.message) }
       }
     }
-    open()
-    return () => { stop = true; clearTimeout(timer); if (cur) { cur.onclose = null; cur.onmessage = null; cur.close() } ws.current = null }
+    connect()
+
+    stopUsers = onValue(presenceList, snap => {
+      const list = Object.values(snap.val() || {}).map(u => ({
+        id: u.id, name: u.name || 'Friend',
+        hue: String(u.id || '').split('').reduce((n, c) => n + c.charCodeAt(0), 0) % 360
+      }))
+      const max = cfg.mode === 'couple' ? 2 : 12
+      if (list.length > max && list.some(u => u.id === cfg.uid)) {
+        remove(myPresence).catch(() => {})
+        setStatus('idle')
+        setErr(cfg.mode === 'couple' ? 'This Love room is full (2 people maximum).' : 'This Friends room is full (12 people maximum).')
+        return
+      }
+      setUsers(list)
+    }, e => { if (active) setErr('Firebase participant sync failed: ' + e.message) })
+
+    stopRangoli = onChildAdded(rangoliEvents, snap => {
+      const event = snap.val()
+      if (!event || !active) return
+      if (event.t === 'rclear') cb.current({ t: 'rclear' })
+      else if (event.t === 'stamps' && Array.isArray(event.list)) cb.current({ t: 'stamps', list: event.list })
+    }, e => { if (active) setErr('Rangoli sync failed: ' + e.message) })
+
+    stopFireworks = onChildAdded(fireworksEvents, snap => {
+      const event = snap.val()
+      if (!event || !active || Date.now() - Number(event.at || 0) > 7000) return
+      cb.current({ t: 'fire', x: event.x, y: event.y, kind: event.kind, hue: event.hue })
+    }, e => { if (active) setErr('Fireworks sync failed: ' + e.message) })
+
+    return () => {
+      active = false
+      stopUsers(); stopRangoli(); stopFireworks()
+      remove(myPresence).catch(() => {})
+    }
   }, [cfg])
-  const send = useCallback(o => { const s = ws.current; if (s && s.readyState === 1) s.send(JSON.stringify(o)) }, [])
+
+  const send = useCallback(message => {
+    if (!cfg || !firebaseReady || !db) return
+    const base = 'diwaliRooms/' + cfg.room
+    if (message?.t === 'stamps' && Array.isArray(message.list) && message.list.length) {
+      push(ref(db, base + '/rangoliEvents'), { t: 'stamps', list: message.list.slice(0, 150), from: cfg.uid, at: Date.now() }).catch(e => setErr('Rangoli update failed: ' + e.message))
+    } else if (message?.t === 'rclear') {
+      const eventsRef = ref(db, base + '/rangoliEvents')
+      remove(eventsRef).then(() => push(eventsRef, { t: 'rclear', from: cfg.uid, at: Date.now() })).catch(e => setErr('Could not clear shared rangoli: ' + e.message))
+    } else if (message?.t === 'fire') {
+      push(ref(db, base + '/fireworks'), { x: message.x, y: message.y, kind: message.kind, hue: message.hue, from: cfg.uid, at: Date.now() }).catch(e => setErr('Fireworks sync failed: ' + e.message))
+    }
+  }, [cfg])
+
   return { status, users, me, err, fails, send }
 }
 
@@ -557,7 +605,7 @@ export default function Live({ onExit }) {
 
   const toggleDiya = i => { if (cfg && firebaseUid) { const next = diyas.map((x, j) => j === i ? !x : x); set(ref(db, 'diwaliRooms/' + cfg.room + '/state/diyas'), next).catch(e => setFirebaseError(e.message)); if (live) send({ t: 'diya', i, v: next[i] }) } else setDiyas(a => a.map((x, j) => j === i ? !x : x)) }
   const allDiya = v => { if (cfg && firebaseUid) { const next = Array(N_DIYA).fill(v); set(ref(db, 'diwaliRooms/' + cfg.room + '/state/diyas'), next).catch(e => setFirebaseError(e.message)); if (live) send({ t: 'diyaAll', v }) } else setDiyas(Array(N_DIYA).fill(v)) }
-  const join = () => { const n = name.trim(); if (!n) return; localStorage.setItem('dv-name', n); setMsgs([]); setRoomMode(mode); setCfg({ room: clean(roomIn) || genRoom(mode), name: n.slice(0, 20), mode, n: Date.now() }) }
+  const join = () => { const n = name.trim(); if (!n) return; if (!firebaseUid) { setFirebaseError('Firebase is still connecting. Please wait a moment and try again.'); return } const selectedMode = roomIn.startsWith('LOVE-') ? 'couple' : roomIn.startsWith('FRIEND-') ? 'friends' : mode; localStorage.setItem('dv-name', n); setMsgs([]); setRoomMode(selectedMode); setMode(selectedMode); setCfg({ room: clean(roomIn) || genRoom(selectedMode), name: n.slice(0, 20), mode: selectedMode, uid: firebaseUid, n: Date.now() }) }
   const leave = () => { setCfg(null); setSolo(true); setMsgs([]) }
   const copyText = async value => {
     try {
@@ -580,7 +628,7 @@ export default function Live({ onExit }) {
       <button className="lv-brand" onClick={onExit}>← <span>🪔 Diwali<b>Live</b></span></button>
       <nav className="lv-tabs">{[['diya', 'Diya'], ['rangoli', 'Rangoli'], ['fw', 'Crackers']].map(([id, l]) => <button key={id} className={'lv-tab' + (tab === id ? ' on' : '')} onClick={() => setTab(id)}>{l}</button>)}</nav>
       <div className="lv-right">
-        <span className={'lv-pill' + (live ? ' on' : '')}>{live ? `● ${users.length} online${couple ? ' · couple' : ''}` : cfg ? (firebaseUid ? 'Firebase room · effects server offline' : (fails >= 2 ? 'server unreachable' : status)) : 'solo'}</span>
+        <span className={'lv-pill' + (live ? ' on' : '')}>{live ? `● ${users.length} online${couple ? ' · love' : ''}` : cfg ? status : 'solo'}</span>
         {cfg && firebaseUid && <><button className="lv-btn" onClick={copyRoomCode}>{copied ? 'copied ✓' : 'copy code'}</button><button className="lv-btn" onClick={invite}>share invite</button></>}
         {!cfg && <button className="lv-btn gold" onClick={() => setSolo(false)}>join room</button>}
         {cfg && <button className="lv-btn" onClick={leave}>leave</button>}
@@ -596,6 +644,6 @@ export default function Live({ onExit }) {
       <Side users={users} me={me} firebaseUid={firebaseUid} msgs={msgs} live={!!cfg && !!firebaseUid} send={sendLive} couple={couple} room={cfg?.room} open={chatOpen} onClose={() => setChatOpen(false)} onClearChat={clearChat} />
     </div>
     {showLobby && <Lobby name={name} setName={setName} room={roomIn} setRoom={setRoomIn} mode={mode} setMode={setMode} onJoin={join} onSolo={() => setSolo(true)} err={err} />}
-    {firebaseError && <div className="lv-warn">{firebaseError}</div>}{cfg && !live && fails >= 2 && !err && <div className="lv-warn">can't reach the live server. run <code>npm run server</code> or set VITE_WS_URL.</div>}
+    {firebaseError && <div className="lv-warn">{firebaseError}</div>}{err && <div className="lv-warn">{err}</div>}
   </div>
 }
