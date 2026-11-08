@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 
 const sections = [
-  ['Home', 'home', Sparkles], ['Fireworks', 'fireworks', PartyPopper], ['Virtual Crackers', 'crackers', Stars], ['Gifts & Cards', 'gifts', Gift], ['Love & Friends Chat', 'chat', Heart],
+  ['Home', 'home', Sparkles], ['Fireworks', 'fireworks', PartyPopper], ['Virtual Crackers', 'crackers', Stars], ['Gifts & Cards', 'gifts', Gift], ['Love & Friends Chat', 'chat', Heart], ['Gifts & Cards', 'gifts', Gift], ['Love & Friends Chat', 'chat', Heart],
   ['Diya World', 'diyas', Flame], ['Rangoli Studio', 'rangoli', Palette],
   ['Home Decor', 'decor', House], ['Greeting Maker', 'greetings', Gift],
   ['Photo Booth', 'photo', Camera], ['Games', 'games', Gamepad2],
@@ -186,28 +186,25 @@ function DiyaCard({ lit, onClick, index }) {
   </button>
 }
 
-function RangoliStudio() {
-  const canvasRef = useRef(null)
-  const [color,setColor] = useState('#ffbd45')
-  const [size,setSize] = useState(7)
-  const [drawing,setDrawing] = useState(false)
-  const colors = ['#ffbd45','#ff5e73','#8e7dff','#50d9c1','#fff1c6','#ff8b3d','#e65acb','#75b9ff']
-  useEffect(()=>{const c=canvasRef.current; const ctx=c.getContext('2d');ctx.fillStyle='#11142d';ctx.fillRect(0,0,c.width,c.height)},[])
-  const point = (e) => { const c=canvasRef.current, r=c.getBoundingClientRect(); return {x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height} }
-  const start = (e) => {e.currentTarget.setPointerCapture(e.pointerId);setDrawing(true); const p=point(e),ctx=canvasRef.current.getContext('2d');ctx.beginPath();ctx.moveTo(p.x,p.y)}
-  const move = (e) => {if(!drawing)return;const p=point(e),ctx=canvasRef.current.getContext('2d');ctx.lineWidth=size;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=color;ctx.shadowColor=color;ctx.shadowBlur=12;ctx.lineTo(p.x,p.y);ctx.stroke()}
-  const clear = () => {const c=canvasRef.current,ctx=c.getContext('2d');ctx.fillStyle='#11142d';ctx.fillRect(0,0,c.width,c.height)}
-  const download = () => {const a=document.createElement('a');a.download='my-diwali-rangoli.png';a.href=canvasRef.current.toDataURL('image/png');a.click()}
-  return <div className="studio-grid">
-    <div className="canvas-card"><div className="canvas-heading"><div><span className="eyebrow">CREATIVE CORNER</span><h3>Your rangoli canvas</h3></div><span className="live-pill">● LIVE DRAW</span></div>
-      <canvas ref={canvasRef} width="760" height="480" className="rangoli-canvas" onPointerDown={start} onPointerMove={move} onPointerUp={()=>setDrawing(false)} onPointerCancel={()=>setDrawing(false)}/>
-      <div className="canvas-actions"><div className="color-list">{colors.map(c=><button key={c} style={{background:c}} className={color===c?'selected':''} onClick={()=>setColor(c)} aria-label={c}/>)}</div><label className="size-control">Brush <input type="range" min="2" max="22" value={size} onChange={e=>setSize(+e.target.value)}/></label></div>
-      <div className="button-row"><button className="btn btn-glass" onClick={clear}><RotateCcw size={15}/> Clear canvas</button><button className="btn btn-gold" onClick={download}><Download size={15}/> Download rangoli</button></div>
-    </div>
-    <div className="side-note"><div className="note-icon"><Flower2/></div><h3>Make it yours.</h3><p>Draw freehand patterns, layer colors and create a little festival art. Your rangoli stays on this device until you clear it.</p><div className="mini-stat"><span>✦</span><div><b>Unlimited creativity</b><small>No templates, no limits — just you.</small></div></div></div>
-  </div>
+function RangoliStudio(){
+ const canvasRef=useRef(null),[color,setColor]=useState('#ffbd45'),[size,setSize]=useState(7),[drawing,setDrawing]=useState(false);
+ const [saved,setSaved]=useState(()=>{try{return JSON.parse(localStorage.getItem('dv-rangoli')||'[]')}catch{return []}});
+ const colors=['#ffbd45','#ff5e73','#8e7dff','#50d9c1','#fff1c6','#ff8b3d','#e65acb','#75b9ff'];
+ const drawPreset=type=>{const c=canvasRef.current,ctx=c.getContext('2d'),cx=c.width/2,cy=c.height/2,p=['#ffbd45','#ff5e73','#8e7dff','#50d9c1','#fff1c6','#ff8b3d'];ctx.fillStyle='#11142d';ctx.fillRect(0,0,c.width,c.height);const n=type==='lotus'?8:type==='mandala'?16:12;for(let ring=0;ring<4;ring++){let radius=35+ring*43;for(let i=0;i<n;i++){let a=i*Math.PI*2/n+(ring%2)*.12,x=cx+Math.cos(a)*radius,y=cy+Math.sin(a)*radius;ctx.beginPath();ctx.ellipse(x,y,type==='lotus'?16:11,type==='lotus'?34:20,a,0,Math.PI*2);ctx.fillStyle=p[(i+ring)%p.length];ctx.globalAlpha=.85;ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle='#fff0bd';ctx.lineWidth=1.5;ctx.stroke()}}ctx.beginPath();ctx.arc(cx,cy,30,0,Math.PI*2);ctx.fillStyle='#f7c85f';ctx.fill()};
+ useEffect(()=>drawPreset('mandala'),[]);
+ const point=e=>{const c=canvasRef.current,r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height}};
+ const start=e=>{e.currentTarget.setPointerCapture(e.pointerId);setDrawing(true);let p=point(e),ctx=canvasRef.current.getContext('2d');ctx.beginPath();ctx.moveTo(p.x,p.y)};
+ const move=e=>{if(!drawing)return;let p=point(e),ctx=canvasRef.current.getContext('2d');ctx.lineWidth=size;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=color;ctx.shadowColor=color;ctx.shadowBlur=10;ctx.lineTo(p.x,p.y);ctx.stroke()};
+ const clear=()=>{let c=canvasRef.current,ctx=c.getContext('2d');ctx.fillStyle='#11142d';ctx.fillRect(0,0,c.width,c.height)};
+ const download=()=>{let a=document.createElement('a');a.download='my-diwali-rangoli.png';a.href=canvasRef.current.toDataURL('image/png');a.click()};
+ const save=()=>{let next=[{id:Date.now(),image:canvasRef.current.toDataURL('image/png')} ,...saved].slice(0,6);setSaved(next);try{localStorage.setItem('dv-rangoli',JSON.stringify(next))}catch{alert('Device storage is full.')}};
+ return <div className='studio-grid'><div className='canvas-card'><div className='canvas-heading'><div><span className='eyebrow'>CREATIVE CORNER</span><h3>Rangoli canvas</h3></div><span className='live-pill'>● READY TO CREATE</span></div>
+ <div className='preset-row'><span>Ready-made designs</span><button onClick={()=>drawPreset('mandala')}>🌸 Mandala</button><button onClick={()=>drawPreset('lotus')}>🪷 Lotus</button><button onClick={()=>drawPreset('flower')}>🌼 Floral</button><button onClick={clear}>Blank canvas</button></div>
+ <canvas ref={canvasRef} width='760' height='480' className='rangoli-canvas' onPointerDown={start} onPointerMove={move} onPointerUp={()=>setDrawing(false)} onPointerCancel={()=>setDrawing(false)}/>
+ <div className='canvas-actions'><div className='color-list'>{colors.map(c=><button key={c} style={{background:c}} className={color===c?'selected':''} onClick={()=>setColor(c)} aria-label={c}/>)}</div><label className='size-control'>Brush <input type='range' min='2' max='22' value={size} onChange={e=>setSize(+e.target.value)}/></label></div>
+ <div className='button-row'><button className='btn btn-glass' onClick={clear}><RotateCcw size={15}/> Clear</button><button className='btn btn-glass' onClick={save}><Heart size={15}/> Save locally</button><button className='btn btn-gold' onClick={download}><Download size={15}/> Download PNG</button></div></div>
+ <div className='side-note'><div className='note-icon'><Flower2/></div><h3>Made by you.</h3><p>Start with a ready-made design, then customize its colors and draw your own details.</p><div className='mini-stat'><span>✦</span><div><b>Saved designs</b><small>{saved.length} stored on this device.</small></div></div>{saved.length>0&&<div className='saved-rangolis'>{saved.map((x,i)=><button key={x.id} onClick={()=>{let im=new Image();im.onload=()=>{let c=canvasRef.current;c.getContext('2d').drawImage(im,0,0,c.width,c.height)};im.src=x.image}}><img src={x.image} alt={'Saved rangoli '+(i+1)}/><small>Load design</small></button>)}</div>}</div></div>
 }
-
 function GreetingMaker() {
   const [from,setFrom]=useState('Your Name')
   const [to,setTo]=useState('Someone Special')
@@ -270,6 +267,22 @@ function SurpriseZone() {
   return <div className="surprise-wrap"><div className="surprise-box"><div className="surprise-gift">🎁</div><span className="eyebrow">A LITTLE FESTIVE SURPRISE</span><h2>{message?'A message just for you':'Something special is waiting.'}</h2><p>{message||'Tap the gift to unwrap a little Diwali happiness.'}</p><button className="btn btn-gold" onClick={()=>setMessage(messages[Math.floor(Math.random()*messages.length)])}>{message?'Open another surprise':'Unwrap your surprise'} <GiftIcon size={16}/></button></div></div>
 }
 
+const giftIdeas=[{id:'love',name:'For someone special',emoji:'💖',tag:'LOVE',text:'You make ordinary days feel like celebrations. Sending you light, laughter and lots of love.'},{id:'friends',name:'For my best friends',emoji:'🫶',tag:'FRIENDSHIP',text:'Life shines brighter with friends like you. Happy Diwali to my favourite people!'},{id:'family',name:'For family',emoji:'🏡',tag:'FAMILY',text:'May our home always be filled with warmth, togetherness and beautiful memories.'},{id:'thanks',name:'A little thank you',emoji:'🎁',tag:'GRATITUDE',text:'Thank you for being a bright part of my life. Wishing you joy and peace.'}];
+function GiftStudio(){
+ const [kind,setKind]=useState('love'),[from,setFrom]=useState('Your name'),[to,setTo]=useState('Someone special'),[note,setNote]=useState(giftIdeas[0].text);const chosen=giftIdeas.find(x=>x.id===kind)||giftIdeas[0];
+ const select=id=>{setKind(id);setNote(giftIdeas.find(x=>x.id===id).text)};
+ const download=()=>{const c=document.createElement('canvas');c.width=1100;c.height=700;const x=c.getContext('2d'),g=x.createLinearGradient(0,0,1100,700);g.addColorStop(0,'#191332');g.addColorStop(.5,'#53264f');g.addColorStop(1,'#123e4a');x.fillStyle=g;x.fillRect(0,0,1100,700);x.strokeStyle='#f7cf79';x.lineWidth=5;x.strokeRect(28,28,1044,644);x.textAlign='center';x.fillStyle='#ffd98c';x.font='30px Georgia';x.fillText(chosen.tag+' · DIWALI EDITION',550,105);x.font='82px Georgia';x.fillText(chosen.emoji,550,220);x.fillStyle='#fff2d5';x.font='bold 68px Georgia';x.fillText('Happy Diwali',550,330);x.font='30px Georgia';x.fillText('Dear '+to.slice(0,35),550,400);x.font='24px Arial';let words=note.split(' '),line='',y=470;for(const word of words){let test=line+word+' ';if(x.measureText(test).width>850){x.fillText(line,550,y);line=word+' ';y+=38}else line=test}x.fillText(line,550,y);x.fillStyle='#ffd98c';x.font='italic 25px Georgia';x.fillText('With love, '+from,550,620);let a=document.createElement('a');a.download='diwaliverse-gift-card.png';a.href=c.toDataURL('image/png');a.click()};
+ const save=()=>{try{let all=JSON.parse(localStorage.getItem('dv-gifts')||'[]');all.unshift({kind,from,to,note,date:new Date().toLocaleDateString('en-IN')});localStorage.setItem('dv-gifts',JSON.stringify(all.slice(0,20)));alert('Gift card saved on this device.')}catch{alert('Local storage is full.')}};
+ return <div className='gift-studio'><div className='gift-choice-grid'>{giftIdeas.map(x=><button className={kind===x.id?'gift-choice active':'gift-choice'} key={x.id} onClick={()=>select(x.id)}><span>{x.emoji}</span><b>{x.name}</b><small>{x.tag}</small></button>)}</div><div className='gift-editor'><div className={'gift-live-card gift-'+kind}><span>✦ {chosen.tag} · FESTIVE EDITION ✦</span><div>{chosen.emoji}</div><h2>Happy Diwali</h2><b>Dear {to||'Someone special'}</b><p>{note}</p><small>With love, {from||'Your name'}</small></div><div className='gift-fields'><span className='eyebrow'>PERSONALIZE YOUR GIFT</span><label>From<input value={from} maxLength='35' onChange={e=>setFrom(e.target.value)}/></label><label>To<input value={to} maxLength='35' onChange={e=>setTo(e.target.value)}/></label><label>Your message<textarea value={note} maxLength='220' onChange={e=>setNote(e.target.value)}/></label><div className='button-row'><button className='btn btn-glass' onClick={save}><Heart size={16}/> Save locally</button><button className='btn btn-gold' onClick={download}><Download size={16}/> Download card</button></div></div></div><p className='local-note'>Saved card details stay in this browser. Download the card to share it.</p></div>
+}
+function LocalChat(){
+ const [room,setRoom]=useState(()=>localStorage.getItem('dv-chat-room')||'LIGHTS-2026'),[name,setName]=useState(()=>localStorage.getItem('dv-chat-name')||'Friend'),[draft,setDraft]=useState('');
+ const [messages,setMessages]=useState(()=>{try{return JSON.parse(localStorage.getItem('dv-chat-'+(localStorage.getItem('dv-chat-room')||'LIGHTS-2026'))||'[]')}catch{return []}});const channel=useRef(null);
+ useEffect(()=>{const key='dv-chat-'+room;localStorage.setItem('dv-chat-room',room);setMessages(()=>{try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return []}});if(channel.current)channel.current.close();if('BroadcastChannel'in window){channel.current=new BroadcastChannel('diwaliverse-'+room);channel.current.onmessage=e=>setMessages(m=>[...m,e.data].slice(-100))}return()=>channel.current?.close()},[room]);
+ useEffect(()=>{localStorage.setItem('dv-chat-'+room,JSON.stringify(messages.slice(-100)))},[messages,room]);
+ const send=e=>{e.preventDefault();if(!draft.trim())return;const msg={id:Date.now()+Math.random(),name:name.trim().slice(0,24)||'Friend',text:draft.trim().slice(0,400),time:new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})};setMessages(m=>[...m,msg].slice(-100));channel.current?.postMessage(msg);setDraft('')};
+ return <div className='chat-shell'><div className='chat-intro'><div className='chat-heart'>💌</div><div><span className='eyebrow'>NO ACCOUNT · NO PASSWORD</span><h2>A little place to <em>say hello.</em></h2><p>Choose a nickname and room code. This demo stores messages in this browser and syncs tabs on the same device.</p></div></div><div className='chat-settings'><label>Your nickname<input value={name} maxLength='24' onChange={e=>{setName(e.target.value);localStorage.setItem('dv-chat-name',e.target.value)}}/></label><label>Room code<input value={room} maxLength='24' onChange={e=>setRoom(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,24))}/></label><button className='btn btn-glass' onClick={()=>navigator.clipboard?.writeText(room).catch(()=>{})}>Copy room code</button></div><div className='chat-notice'>🔒 LOCAL DEMO CHAT — it does not connect different phones or people over the internet. Remote chat requires a shared realtime backend.</div><div className='chat-messages' aria-live='polite'>{messages.length===0?<div className='chat-empty'>💬<b>Your conversation starts here.</b><small>Open this same site in another tab on this device to test.</small></div>:messages.map(m=><div className='chat-message' key={m.id}><div><b>{m.name}</b><time>{m.time}</time></div><p>{m.text}</p></div>)}</div><form className='chat-compose' onSubmit={send}><input value={draft} maxLength='400' onChange={e=>setDraft(e.target.value)} placeholder='Write a kind message…' aria-label='Message'/><button className='btn btn-gold' type='submit' disabled={!draft.trim()}><Send size={16}/> Send</button></form><div className='chat-actions'><button onClick={()=>{if(confirm('Clear this room on this device?'))setMessages([])}}>Clear this device chat</button></div></div>
+}
 function App() {
   const [active,setActive]=useState('home')
   const [soundOn,setSoundOn]=useState(false)
@@ -284,7 +297,7 @@ function App() {
   const audioRef=useRef(null)
   const musicOsc=useRef(null)
   const [dark,setDark]=useState(true)
-  const [theme,setTheme]=useState('gold')
+  const [theme,setTheme]=useState('rainbow')
   const [count,setCount]=useState({days:0,hours:0,minutes:0,seconds:0})
 
   useEffect(()=>{
@@ -317,7 +330,7 @@ function App() {
     musicOsc.current=ctx;setMusicOn(true)
   }
   const toggleFullscreen=()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});else document.exitFullscreen?.()}
-  const cycleTheme=()=>setTheme(t=>t==='gold'?'rose':t==='rose'?'emerald':'gold')
+  const cycleTheme=()=>setTheme(t=>t==='rainbow'?'rose':t==='rose'?'emerald':'rainbow')
   const go=(id)=>{setActive(id);setMobileMenu(false);window.scrollTo({top:0,behavior:'smooth'})}
   const addWish=(e)=>{e.preventDefault();if(!wish.trim())return;setWall([{id:Date.now(),text:wish.trim(),date:new Date().toLocaleDateString('en-IN')} ,...wall].slice(0,30));setWish('')}
   const nav=sections.map(([label,id,Icon])=><button key={id} className={active===id?'nav-link active':'nav-link'} onClick={()=>go(id)}><Icon size={16}/><span>{label}</span></button>)
@@ -339,6 +352,8 @@ function App() {
       <section className="quote-band"><span>“</span><p>May the light within you shine brighter than the lights around you.</p><small>— A DIWALI WISH</small></section></>}
       {active==='fireworks'&&<section className="page-section"><PageTitle eyebrow="THE NIGHT SKY" title="Fireworks" accent="World" desc="A little sparkle goes a long way. Tap anywhere on the canvas and make the night yours."/><Fireworks soundOn={soundOn}/><p className="tiny-muted centered">Sound effects are synthesized in your browser. Turn sound on using the speaker button above.</p></section>}
       {active==='crackers'&&<section className="page-section"><PageTitle eyebrow="THE VIRTUAL FIREWORK GALLERY" title="Cracker" accent="Explorer" desc="Tap a firework to preview its motion, colors and visual pattern — all safely simulated on your screen."/><VirtualCrackers/></section>}
+      {active==='gifts'&&<section className="page-section"><PageTitle eyebrow="LITTLE SURPRISES, BIG FEELINGS" title="Gifts &" accent="Cards" desc="Create a thoughtful Diwali card for your partner, friends or family."/><GiftStudio/></section>}
+      {active==='chat'&&<section className="page-section"><PageTitle eyebrow="A LITTLE PLACE TO SAY HELLO" title="Love & Friends" accent="Chat" desc="A no-login local chat demo with a room code."/><LocalChat/></section>}
       {active==='diyas'&&<section className="page-section"><PageTitle eyebrow="LIGHT UP THE MOMENT" title="Diya" accent="World" desc="Every little flame makes the world a little brighter. Tap a diya to light it."/><div className="diya-grid">{lit.map((v,i)=><DiyaCard key={i} index={i} lit={v} onClick={()=>setLit(a=>a.map((x,j)=>j===i?!x:x))}/>)}</div><div className="center-actions"><button className="btn btn-gold" onClick={()=>setLit(lit.map(()=>true))}><Flame size={16}/> Light all diyas</button><button className="btn btn-glass" onClick={()=>setLit(lit.map(()=>false))}>Blow out all</button></div></section>}
       {active==='rangoli'&&<section className="page-section"><PageTitle eyebrow="MAKE SOMETHING BEAUTIFUL" title="Rangoli" accent="Studio" desc="Pick a color, draw a pattern and make your own little piece of festive art."/><RangoliStudio/></section>}
       {active==='decor'&&<section className="page-section"><PageTitle eyebrow="MAKE YOURSELF AT HOME" title="Virtual Home" accent="Decor" desc="Choose your favorite festive touches and decorate this little digital home."/><div className="decor-scene"><div className="decor-stars">✦　 ·　 ✧　　 ✦</div><div className="decor-house"><div className="roof">⌂</div><div className="house-body"><div className="house-window">✧</div><div className="house-door">🪔</div><div className="house-window">✧</div></div><div className="house-floor"> {decor.includes('diyas')?'🪔　🪔　🪔':''} {decor.includes('flowers')?'🌼　🌸　🌼':''} </div></div><div className="decor-effects">{decor.includes('lights')&&<div className="fairy-lights">✦　·　✦　·　✦　·　✦　·　✦</div>}{decor.includes('lanterns')&&<div className="floating-lanterns">🏮　　 🏮　　 🏮</div>}{decor.includes('stars')&&<div className="star-layer">✧　　 ✦　　 ✧　　 ✦</div>}{decor.includes('toran')&&<div className="toran">🌼🌿🌼🌿🌼🌿🌼</div>}</div></div><div className="decor-controls"><h3>Choose your decorations</h3>{decorItems.map(([id,emoji,label])=><button key={id} className={decor.includes(id)?'decor-chip selected':'decor-chip'} onClick={()=>setDecor(a=>a.includes(id)?a.filter(x=>x!==id):[...a,id])}><span>{emoji}</span>{label}{decor.includes(id)&&' ✓'}</button>)}</div></section>}
