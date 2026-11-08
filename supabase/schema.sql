@@ -135,3 +135,38 @@ do $$ begin alter publication supabase_realtime add table public.room_state;
 exception when duplicate_object then null; when undefined_object then null; end $$;
 do $$ begin alter publication supabase_realtime add table public.room_events;
 exception when duplicate_object then null; when undefined_object then null; end $$;
+
+-- Restrict room-member visibility to people already in that room without recursive RLS.
+create or replace function public.diwali_is_room_member(p_room_code text)
+returns boolean language sql stable security definer set search_path=public as $$
+  select exists(select 1 from public.room_members where room_code=p_room_code and user_id=auth.uid())
+$$;
+grant execute on function public.diwali_is_room_member(text) to authenticated;
+
+create or replace function public.diwali_check_capacity() returns trigger
+language plpgsql security definer set search_path=public as $$
+declare m text; n integer;
+begin
+  perform pg_advisory_xact_lock(hashtext(new.room_code));
+  select mode into m from public.rooms where room_code=new.room_code;
+  select count(*) into n from public.room_members where room_code=new.room_code;
+  if not exists(select 1 from public.room_members where room_code=new.room_code and user_id=new.user_id)
+     and n >= case when m='couple' then 2 else 12 end then raise exception 'This room is full.'; end if;
+  return new;
+end $$;
+
+drop policy if exists "members readable" on public.room_members;
+create policy "members readable" on public.room_members for select to authenticated
+using(public.diwali_is_room_member(room_code));
+drop policy if exists "members read state" on public.room_state;
+create policy "members read state" on public.room_state for select to authenticated
+using(public.diwali_is_room_member(room_code));
+drop policy if exists "members write state" on public.room_state;
+create policy "members write state" on public.room_state for all to authenticated
+using(public.diwali_is_room_member(room_code)) with check(public.diwali_is_room_member(room_code));
+drop policy if exists "members read events" on public.room_events;
+create policy "members read events" on public.room_events for select to authenticated
+using(public.diwali_is_room_member(room_code));
+drop policy if exists "members insert events" on public.room_events;
+create policy "members insert events" on public.room_events for insert to authenticated
+with check(sender_id=auth.uid() and public.diwali_is_room_member(room_code));
