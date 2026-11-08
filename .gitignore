@@ -6,4 +6,3 @@ dist
 .DS_Store
 *firebase-adminsdk*.json
 serviceAccount*.json
-android/
