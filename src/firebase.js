@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app'
 import { getAuth, signInAnonymously, setPersistence, browserLocalPersistence } from 'firebase/auth'
-import { getDatabase, ref, onValue, push, remove, set } from 'firebase/database'
+import { getDatabase, ref, onValue, push, remove, set, onDisconnect, onChildAdded, query, limitToLast } from 'firebase/database'
 
 // Vite exposes only VITE_* variables to browser code. These values are public
 // Firebase web-app configuration, not admin credentials or service-account keys.
@@ -42,4 +42,4 @@ export const ensureGuest = () => {
   return guestPromise
 }
 
-export { ref, onValue, push, remove, set }
+export { ref, onValue, push, remove, set, onDisconnect, onChildAdded, query, limitToLast }
