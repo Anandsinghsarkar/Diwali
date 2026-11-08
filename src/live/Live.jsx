@@ -99,7 +99,7 @@ function useRoom(cfg, onMsg) {
       push(ref(db, base + '/rangoliEvents'), { t: 'stamps', list: message.list.slice(0, 150), from: cfg.uid, at: Date.now() }).catch(e => setErr('Rangoli update failed: ' + e.message))
     } else if (message?.t === 'rclear') {
       const eventsRef = ref(db, base + '/rangoliEvents')
-      remove(eventsRef).then(() => push(eventsRef, { t: 'rclear', from: cfg.uid, at: Date.now() })).catch(e => setErr('Could not clear shared rangoli: ' + e.message))
+      push(eventsRef, { t: 'rclear', from: cfg.uid, at: Date.now() }).catch(e => setErr('Could not clear shared rangoli: ' + e.message))
     } else if (message?.t === 'fire') {
       push(ref(db, base + '/fireworks'), { x: message.x, y: message.y, kind: message.kind, hue: message.hue, from: cfg.uid, at: Date.now() }).catch(e => setErr('Fireworks sync failed: ' + e.message))
     }
@@ -535,7 +535,7 @@ function Lobby({ name, setName, room, setRoom, mode, setMode, onJoin, onSolo, er
     {err && <div className="lv-err">{err}</div>}
     <label>Your name<input value={name} maxLength={20} onChange={e => setName(e.target.value)} placeholder="your name" /></label>
     <div className="lv-seg"><button className={mode === 'friends' ? 'on' : ''} onClick={() => { setMode('friends'); setRoomIn(genRoom('friends')) }}>👥 Friends</button><button className={mode === 'couple' ? 'on' : ''} onClick={() => { setMode('couple'); setRoomIn(genRoom('couple')) }}>💗 Love (2)</button></div>
-    <label>Room code<div className="lv-row"><input value={room} onChange={e => setRoom(clean(e.target.value))} /><button type="button" className="lv-btn" onClick={() => setRoom(genRoom())}>🎲</button></div></label>
+    <label>Room code<div className="lv-row"><input value={room} onChange={e => setRoom(clean(e.target.value))} /><button type="button" className="lv-btn" onClick={() => setRoom(genRoom(mode))}>🎲</button></div></label>
     <button className="lv-btn gold big" disabled={!name.trim() || !room} onClick={onJoin}>Join room</button>
     <button className="lv-link" onClick={onSolo}>or play solo</button>
   </div></div>
