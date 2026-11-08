@@ -63,6 +63,7 @@ export function useRoom(cfg, onMsg) {
         const metaRef = child(base, 'meta')
         let meta = (await get(metaRef)).val()
         if (!meta) {
+          if (cfg.intent === 'join') throw new Error('No room found with this code. Check the code, or ask your partner to generate one.')
           const fresh = { mode: cfg.mode, max: cfg.mode === 'couple' ? 2 : 12, createdAt: Date.now() }
           try { await set(metaRef, fresh); meta = fresh } catch { meta = (await get(metaRef)).val() }
           if (!meta) throw new Error('could not create room')
@@ -77,19 +78,23 @@ export function useRoom(cfg, onMsg) {
 
         offs.push(onValue(ref(db, '.info/serverTimeOffset'), s => { const v = s.val() || 0; if (ctx.current) ctx.current.off = v; setOffset(v) }))
 
-        const pr = child(base, `presence/${uid}`)
+        const pr = child(base, `presence/${uid}`), tp = child(base, `typing/${uid}`)
         offs.push(onValue(ref(db, '.info/connected'), s => {
-          if (s.val()) { clearTimeout(failTimer); setFails(0); setStatus('live'); safe(onDisconnect(pr).set(false).then(() => set(pr, true))) }
-          else { setStatus('reconnecting'); clearTimeout(failTimer); failTimer = setTimeout(() => setFails(2), 6000) }
+          if (s.val()) {
+            clearTimeout(failTimer); setFails(0); setStatus('live')
+            safe(onDisconnect(pr).set(false).then(() => set(pr, true)))
+            safe(onDisconnect(tp).remove())
+          } else { setStatus('reconnecting'); clearTimeout(failTimer); failTimer = setTimeout(() => setFails(2), 6000) }
         }))
         offs.push(onValue(child(base, 'presence'), s => setOnline(s.val() || {})))
+        offs.push(onValue(child(base, 'typing'), s => emit({ t: 'typing', typing: s.val() || {} })))
 
         let prevM = null
         offs.push(onValue(child(base, 'members'), s => {
           const v = s.val() || {}
           setUsers(Object.entries(v).map(([id, m]) => ({ id, name: m.name || 'Friend', hue: m.hue ?? 0 })))
           if (prevM) {
-            for (const id of Object.keys(v)) if (!prevM[id]) emit({ t: 'chat', kind: 'sys', id: 's' + Math.random(), name: v[id].name || 'Someone', text: 'joined' })
+            for (const id of Object.keys(v)) if (!prevM[id]) emit({ t: 'chat', kind: 'sys', id: 's' + Math.random(), name: v[id].name || 'Someone', text: 'joined the room' })
             for (const id of Object.keys(prevM)) if (!v[id]) emit({ t: 'chat', kind: 'sys', id: 's' + Math.random(), name: prevM[id].name || 'Someone', text: 'left for good' })
           }
           prevM = v
@@ -121,7 +126,7 @@ export function useRoom(cfg, onMsg) {
 
         offs.push(onChildAdded(query(child(base, 'chat'), orderByChild('at'), startAt(joinAt)), s => {
           const v = s.val(); if (!v) return
-          emit({ t: 'chat', id: s.key, from: v.from, name: v.name, text: v.text, kind: v.kind || 'msg', at: v.at || Date.now() })
+          emit({ t: 'chat', id: s.key, from: v.from, name: v.name, text: v.text, kind: v.kind || 'msg', to: v.to, at: v.at || Date.now() })
         }))
       } catch (e) {
         if (dead) return
@@ -133,7 +138,7 @@ export function useRoom(cfg, onMsg) {
       dead = true; clearTimeout(failTimer)
       offs.forEach(f => { try { f() } catch { /* ignore */ } })
       const c = ctx.current
-      if (c) safe(set(child(c.base, `presence/${c.uid}`), false))
+      if (c) { safe(set(child(c.base, `presence/${c.uid}`), false)); safe(remove(child(c.base, `typing/${c.uid}`))) }
       ctx.current = null
     }
   }, [cfg])
@@ -146,7 +151,18 @@ export function useRoom(cfg, onMsg) {
       case 'rclear': safe(update(base, { 'meta/epoch': Date.now(), rangoli: null })); break
       case 'fire': { const r = push(child(base, 'fire')); safe(set(r, { by: uid, x: m.x, y: m.y, kind: m.kind, hue: m.hue, at: serverTimestamp() })); setTimeout(() => safe(remove(r)), 8000); break }
       case 'chat': safe(push(child(base, 'chat'), { from: uid, name: c.name, text: m.text, kind: m.kind || 'msg', at: serverTimestamp() })); break
+      case 'typing': safe(m.v ? set(child(base, `typing/${uid}`), true) : remove(child(base, `typing/${uid}`))); break
       case 'lit': safe(runTransaction(child(base, `players/${uid}/lit`), v => clampLit(m.set != null ? m.set : (v || 0) + m.add))); break
+      case 'blow': {
+        // puff out someone else's diyas, then tell the room
+        let was = 0
+        const p = runTransaction(child(base, `players/${m.target}/lit`), v => { was = v || 0; return Math.max(0, was - (m.all ? was : m.n)) })
+          .then(() => {
+            const gone = m.all ? was : Math.min(was, m.n)
+            if (gone > 0) return push(child(base, 'chat'), { from: uid, name: c.name, to: m.target, kind: 'sys', text: `blew out ${gone.toLocaleString('en-IN')} of ${m.targetName}'s diyas 💨`, at: serverTimestamp() })
+          })
+        safe(p); break
+      }
       case 'raceTap':
         safe(runTransaction(child(base, `players/${uid}/lit`), v => clampLit((v || 0) + 1)))
         safe(runTransaction(child(base, `raceScores/${uid}`), v => (v || 0) + 1))
