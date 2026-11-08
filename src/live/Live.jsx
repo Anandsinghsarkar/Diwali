@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './live2.css'
-import { useRoom } from './supabase.js'
+import { useRoom, supabase } from './supabase.js'
 import DiyaBoard from './Diya.jsx'
 import Rangoli from './Rangoli.jsx'
 import Crackers from './Crackers.jsx'
@@ -164,8 +164,17 @@ export default function Live({ onExit }) {
     onMsg({ t: 'rclear' })
     setCfg({ room: clean(code) || genCode(m), name: n.slice(0, 20), mode: m, intent, n: Date.now() })
   }
-  const leave = () => { localStorage.removeItem(SAVE); setCfg(null); setSolo(true); setMsgs([]) }
-  const quit = () => { if (!window.confirm('Leave this room permanently? Your slot is freed.')) return; send({ t: 'quit' }); leave() }
+  const leave = async () => {
+    if (cfg && me && supabase) {
+      const { error } = await supabase.from('room_members').delete().eq('room_code', cfg.room).eq('user_id', me)
+      if (error) { setToast(error.message || 'Could not leave room yet.'); return }
+      await supabase.from('profiles').update({ current_room: null, updated_at: new Date().toISOString() }).eq('id', me)
+    }
+    localStorage.removeItem(SAVE)
+    setCfg(null); setSolo(true); setMsgs([]); setPlayers({}); setRace(null); setScores({}); setTyping({})
+    setToast('You left the room.')
+  }
+  const quit = async () => { if (!window.confirm('Leave this room permanently? Your slot is freed.')) return; await leave() }
   const inviteUrl = cfg ? `${location.origin}${location.pathname}#live?room=${cfg.room}&mode=${roomMode}` : ''
   const copy = (txt, key) => { navigator.clipboard?.writeText(txt).then(() => { setCopied(key); setTimeout(() => setCopied(''), 1500) }).catch(() => {}) }
   const showLobby = (!cfg && !solo) || !!err
