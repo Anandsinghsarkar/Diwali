@@ -5,7 +5,7 @@ import { clampLit } from './common.js'
 const url = import.meta.env.VITE_SUPABASE_URL
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY
 export const supabaseReady = Boolean(url && key)
-const supabase = supabaseReady ? createClient(url, key, {
+export const supabase = supabaseReady ? createClient(url, key, {
   auth: { persistSession: true, autoRefreshToken: true },
   realtime: { params: { eventsPerSecond: 20 } }
 }) : null
@@ -24,12 +24,10 @@ const explain = e => {
 }
 async function guest() {
   if (!supabase) throw new Error(explain())
-  const { data:{session}, error:sessionError } = await supabase.auth.getSession()
-  if (sessionError) throw sessionError
-  if (session?.user) return session.user
-  const { data, error } = await supabase.auth.signInAnonymously()
+  const { data:{session}, error } = await supabase.auth.getSession()
   if (error) throw error
-  return data.user
+  if (!session?.user) throw new Error('Please login or register before entering a Diya room.')
+  return session.user
 }
 async function event(room, uid, type, payload) {
   const { error } = await supabase.from('room_events').insert({ room_code:room, sender_id:uid, event_type:type, payload })
@@ -72,7 +70,7 @@ export function useRoom(cfg, onMsg) {
         const {error:memberError}=await supabase.from('room_members').upsert({room_code:room,user_id:uid,name:cfg.name,hue:hueOf(uid)},{onConflict:'room_code,user_id'})
         if(memberError)throw memberError
         if(dead)return
-        ctx.current={room,uid,name:cfg.name,channel:null}
+        ctx.current={room,uid,name:cfg.name,channel:null}\n        await supabase.from('profiles').update({current_room:room,updated_at:new Date().toISOString()}).eq('id',uid)
         setMe(uid); emit({t:'init',id:uid,mode:roomRow.mode})
         await loadMembers()
         const {data:rows,error:stateError}=await supabase.from('room_state').select('state_key,value').eq('room_code',room)
@@ -129,7 +127,7 @@ export function useRoom(cfg, onMsg) {
       dead=true
       if(channel){safe(channel.untrack());safe(supabase.removeChannel(channel))}
       const c=ctx.current
-      if(c)safe(supabase.from('room_members').delete().eq('room_code',c.room).eq('user_id',c.uid))
+      if(c){safe(supabase.from('room_members').delete().eq('room_code',c.room).eq('user_id',c.uid));safe(supabase.from('profiles').update({current_room:null,updated_at:new Date().toISOString()}).eq('id',c.uid))}
       ctx.current=null
     }
   },[cfg])
