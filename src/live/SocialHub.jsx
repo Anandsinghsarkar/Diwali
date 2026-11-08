@@ -29,9 +29,9 @@ export default function SocialHub(){
  const submit=async e=>{e.preventDefault();setError('');setNotice('');setBusy('auth');try{
   if(mode==='register'){
    const {data,error}=await supabase.auth.signUp({email:email.trim(),password,options:{data:{display_name:name.trim()}}});if(error)throw error
-   if(data.session){await supabase.from('profiles').upsert({id:data.user.id,display_name:name.trim(),email:email.trim()},{onConflict:'id'});setNotice('Account created. Welcome!')}
+   if(data.session){await supabase.from('profiles').upsert({id:data.user.id,display_name:name.trim()},{onConflict:'id'});setNotice('Account created. Welcome!')}
    else setNotice('Registration successful. Email confirmation required ho sakta hai; inbox check karke login karo.')
-  }else{const {data,error}=await supabase.auth.signInWithPassword({email:email.trim(),password});if(error)throw error;await supabase.from('profiles').upsert({id:data.user.id,display_name:data.user.user_metadata?.display_name||email.split('@')[0],email:email.trim()},{onConflict:'id'})}
+  }else{const {data,error}=await supabase.auth.signInWithPassword({email:email.trim(),password});if(error)throw error;await supabase.from('profiles').upsert({id:data.user.id,display_name:data.user.user_metadata?.display_name||email.split('@')[0]},{onConflict:'id'})}
  }catch(e){setError(msg(e))}finally{setBusy('')}
  }
  const act=async(key,fn)=>{setBusy(key);setError('');setNotice('');try{await fn();await load()}catch(e){setError(msg(e))}finally{setBusy('')}}
