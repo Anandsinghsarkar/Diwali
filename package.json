@@ -1,14 +1,12 @@
 {
   "name": "diwaliverse",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0",
-    "server": "node server/server.js",
-    "start": "vite build && node server/server.js"
+    "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
@@ -16,8 +14,7 @@
     "react": "latest",
     "react-dom": "latest",
     "lucide-react": "latest",
-    "ws": "^8.18.0",
-    "firebase": "^12.6.0"
+    "firebase": "^11.0.0"
   },
   "devDependencies": {}
 }
