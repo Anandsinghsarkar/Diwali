@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 
 const sections = [
-  ['Home', 'home', Sparkles], ['Fireworks', 'fireworks', PartyPopper], ['Virtual Crackers', 'crackers', Stars], ['Gifts & Cards', 'gifts', Gift], ['Love & Friends Chat', 'chat', Heart], ['Gifts & Cards', 'gifts', Gift], ['Love & Friends Chat', 'chat', Heart],
+  ['Home', 'home', Sparkles], ['Fireworks', 'fireworks', PartyPopper], ['Virtual Crackers', 'crackers', Stars], ['Gifts & Cards', 'gifts', Gift], ['Love & Friends Chat', 'chat', Heart],
   ['Diya World', 'diyas', Flame], ['Rangoli Studio', 'rangoli', Palette],
   ['Home Decor', 'decor', House], ['Greeting Maker', 'greetings', Gift],
   ['Photo Booth', 'photo', Camera], ['Games', 'games', Gamepad2],
