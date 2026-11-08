@@ -475,7 +475,7 @@ function Side({ users, me, firebaseUid, msgs, live, send, couple, room, open, on
       : <div key={m.id} className={'lv-msg' + (m.from === firebaseUid ? ' me' : '') + (m.kind === 'love' ? ' love' : '')}><small>{m.from === firebaseUid ? 'You' : m.name} · {timeOf(m.at)}</small><p>{m.text}</p></div>)}<div ref={end} /></div>
     <div className="lv-quick">{quick.map(q => <button key={q} disabled={!live} onClick={() => go(q, couple ? 'love' : 'msg')}>{q}</button>)}</div>
     <form className="lv-compose" onSubmit={e => { e.preventDefault(); go() }}><input value={d} maxLength={400} onChange={e => setD(e.target.value)} placeholder={live ? 'say something…' : 'join a room to chat'} disabled={!live} /><button disabled={!live || !d.trim()}>Send</button></form>
-    <p className="lv-note">Firebase real-time chat · Clear removes messages for everyone in this room.</p>
+    <p className="lv-note">Firebase real-time chat · Clear removes only your messages.</p>
   </aside>
 }
 
@@ -547,8 +547,11 @@ export default function Live({ onExit }) {
     send(message)
   }, [cfg, firebaseUid, name, send])
   const clearChat = useCallback(() => {
-    if (cfg && firebaseUid && window.confirm('Clear every message in this room for everyone?')) remove(ref(db, 'diwaliRooms/' + cfg.room + '/messages')).catch(e => setFirebaseError('Could not clear chat: ' + e.message))
-  }, [cfg, firebaseUid])
+    if (!cfg || !firebaseUid || !window.confirm('Clear your messages from this room?')) return
+    Promise.all(msgs.filter(message => message.from === firebaseUid).map(message =>
+      remove(ref(db, 'diwaliRooms/' + cfg.room + '/messages/' + message.id))
+    )).catch(e => setFirebaseError('Could not clear your messages: ' + e.message))
+  }, [cfg, firebaseUid, msgs])
   const live = status === 'live'
   const couple = !!cfg && roomMode === 'couple'
 
