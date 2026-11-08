@@ -10,8 +10,8 @@ A responsive, interactive Diwali celebration website built with React and Vite. 
 - **Rangoli Studio** — freehand drawing, color palette, brush size, clear, and PNG download.
 - **Virtual Home Decorator** — toggle fairy lights, flowers, diyas, toran, lanterns, and stars.
 - **Greeting Card Maker** — personalize a greeting, choose a theme, download as PNG, and share.
-- **Festive Photo Booth** — local photo preview, frame choices, and PNG download. Photos are not uploaded.
-- **Diwali Quiz** — a small interactive festival quiz with score and restart.
+- **Festive Photo Booth** — local photo preview, festive filters, frame choices, and PNG download. Photos are not uploaded.
+- **Diwali Quiz** — an expanded festival quiz with score tracking and restart.
 - **Music & Sound** — locally synthesized ambient tones and fireworks effects using the Web Audio API.
 - **Celebration Wall** — post wishes saved locally in the current browser.
 - **Stories & Traditions** — a short introduction to Diwali customs.
