@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './live2.css'
-import { useRoom } from './fb.js'
+import { useRoom } from './supabase.js'
 import DiyaBoard from './Diya.jsx'
 import Rangoli from './Rangoli.jsx'
 import Crackers from './Crackers.jsx'
