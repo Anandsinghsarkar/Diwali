@@ -171,7 +171,7 @@ export default function Live({ onExit }) {
       await supabase.from('profiles').update({ current_room: null, updated_at: new Date().toISOString() }).eq('id', me)
     }
     localStorage.removeItem(SAVE)
-    setCfg(null); setSolo(true); setMsgs([]); setPlayers({}); setRace(null); setScores({}); setTyping({})
+    setCfg(null); setSolo(false); setMsgs([]); setPlayers({}); setRace(null); setScores({}); setTyping({})
     setToast('You left the room.')
   }
   const quit = async () => { if (!window.confirm('Leave this room permanently? Your slot is freed.')) return; await leave() }
