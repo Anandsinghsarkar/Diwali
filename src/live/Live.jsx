@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { db, ensureGuest, ref, onValue, push, remove, set } from '../firebase.js'
+import { db, ensureGuest, firebaseReady, ref, onValue, push, remove, set } from '../firebase.js'
 
 const WS_URL = import.meta.env.VITE_WS_URL || `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:8787`
 const N_DIYA = 12
@@ -11,7 +11,7 @@ const rnd = (a, b) => a + Math.random() * (b - a)
 const pick = a => a[(Math.random() * a.length) | 0]
 const mulberry32 = a => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
 const clean = s => String(s || '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 24)
-const genRoom = () => 'DIWALI-' + Math.random().toString(36).slice(2, 10).toUpperCase()
+const genRoom = (mode = 'friends') => (mode === 'couple' ? 'LOVE-' : 'FRIEND-') + Array.from({ length: 8 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('')
 const timeOf = at => new Date(at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
 
 function fit(c, ctx) {
@@ -486,7 +486,7 @@ function Lobby({ name, setName, room, setRoom, mode, setMode, onJoin, onSolo, er
     <p>Same room code, same sky, same diyas, same rangoli floor. No account needed.</p>
     {err && <div className="lv-err">{err}</div>}
     <label>Your name<input value={name} maxLength={20} onChange={e => setName(e.target.value)} placeholder="your name" /></label>
-    <div className="lv-seg"><button className={mode === 'friends' ? 'on' : ''} onClick={() => setMode('friends')}>👥 Friends</button><button className={mode === 'couple' ? 'on' : ''} onClick={() => setMode('couple')}>💞 Couple (2)</button></div>
+    <div className="lv-seg"><button className={mode === 'friends' ? 'on' : ''} onClick={() => { setMode('friends'); setRoomIn(genRoom('friends')) }}>👥 Friends</button><button className={mode === 'couple' ? 'on' : ''} onClick={() => { setMode('couple'); setRoomIn(genRoom('couple')) }}>💗 Love (2)</button></div>
     <label>Room code<div className="lv-row"><input value={room} onChange={e => setRoom(clean(e.target.value))} /><button type="button" className="lv-btn" onClick={() => setRoom(genRoom())}>🎲</button></div></label>
     <button className="lv-btn gold big" disabled={!name.trim() || !room} onClick={onJoin}>Join room</button>
     <button className="lv-link" onClick={onSolo}>or play solo</button>
@@ -497,7 +497,7 @@ function Lobby({ name, setName, room, setRoom, mode, setMode, onJoin, onSolo, er
 export default function Live({ onExit }) {
   const hp = useMemo(() => { const q = new URLSearchParams(location.hash.split('?')[1] || ''); return { room: clean(q.get('room')), mode: q.get('mode') === 'couple' ? 'couple' : 'friends' } }, [])
   const [name, setName] = useState(() => localStorage.getItem('dv-name') || '')
-  const [roomIn, setRoomIn] = useState(hp.room || genRoom())
+  const [roomIn, setRoomIn] = useState(hp.room || genRoom(hp.mode))
   const [mode, setMode] = useState(hp.mode)
   const [roomMode, setRoomMode] = useState(hp.mode)
   const [cfg, setCfg] = useState(null)
@@ -522,6 +522,7 @@ export default function Live({ onExit }) {
   const { status, users, me, err, fails, send } = useRoom(cfg, onMsg)
   useEffect(() => {
     let active = true
+    if (!firebaseReady) { setFirebaseError('Firebase is not configured. Add the VITE_FIREBASE_* variables in Vercel, then redeploy.'); return () => { active = false } }
     ensureGuest().then(user => { if (active) setFirebaseUid(user.uid) }).catch(e => { if (active) setFirebaseError('Firebase sign-in failed: ' + e.message) })
     return () => { active = false }
   }, [])
@@ -549,16 +550,26 @@ export default function Live({ onExit }) {
     if (cfg && firebaseUid && window.confirm('Clear every message in this room for everyone?')) remove(ref(db, 'diwaliRooms/' + cfg.room + '/messages')).catch(e => setFirebaseError('Could not clear chat: ' + e.message))
   }, [cfg, firebaseUid])
   const live = status === 'live'
-  const couple = live && roomMode === 'couple'
+  const couple = !!cfg && roomMode === 'couple'
 
   const toggleDiya = i => { if (cfg && firebaseUid) { const next = diyas.map((x, j) => j === i ? !x : x); set(ref(db, 'diwaliRooms/' + cfg.room + '/state/diyas'), next).catch(e => setFirebaseError(e.message)); if (live) send({ t: 'diya', i, v: next[i] }) } else setDiyas(a => a.map((x, j) => j === i ? !x : x)) }
   const allDiya = v => { if (cfg && firebaseUid) { const next = Array(N_DIYA).fill(v); set(ref(db, 'diwaliRooms/' + cfg.room + '/state/diyas'), next).catch(e => setFirebaseError(e.message)); if (live) send({ t: 'diyaAll', v }) } else setDiyas(Array(N_DIYA).fill(v)) }
-  const join = () => { const n = name.trim(); if (!n) return; localStorage.setItem('dv-name', n); setMsgs([]); setRoomMode(mode); setCfg({ room: clean(roomIn) || genRoom(), name: n.slice(0, 20), mode, n: Date.now() }) }
+  const join = () => { const n = name.trim(); if (!n) return; localStorage.setItem('dv-name', n); setMsgs([]); setRoomMode(mode); setCfg({ room: clean(roomIn) || genRoom(mode), name: n.slice(0, 20), mode, n: Date.now() }) }
   const leave = () => { setCfg(null); setSolo(true); setMsgs([]) }
+  const copyText = async value => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    } catch {
+      setFirebaseError('Clipboard access was blocked. Please copy the room code manually: ' + value)
+    }
+  }
   const invite = () => {
     const url = `${location.origin}${location.pathname}#live?room=${cfg.room}&mode=${roomMode}`
-    navigator.clipboard?.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) }).catch(() => {})
+    copyText(url)
   }
+  const copyRoomCode = () => copyText(cfg.room)
   const showLobby = (!cfg && !solo) || (!!err && !firebaseUid)
 
   return <div className="lv">
@@ -567,7 +578,7 @@ export default function Live({ onExit }) {
       <nav className="lv-tabs">{[['diya', 'Diya'], ['rangoli', 'Rangoli'], ['fw', 'Crackers']].map(([id, l]) => <button key={id} className={'lv-tab' + (tab === id ? ' on' : '')} onClick={() => setTab(id)}>{l}</button>)}</nav>
       <div className="lv-right">
         <span className={'lv-pill' + (live ? ' on' : '')}>{live ? `● ${users.length} online${couple ? ' · couple' : ''}` : cfg ? (firebaseUid ? 'Firebase room · effects server offline' : (fails >= 2 ? 'server unreachable' : status)) : 'solo'}</span>
-        {cfg && firebaseUid && <button className="lv-btn" onClick={invite}>{copied ? 'copied ✓' : 'invite link'}</button>}
+        {cfg && firebaseUid && <><button className="lv-btn" onClick={copyRoomCode}>{copied ? 'copied ✓' : 'copy code'}</button><button className="lv-btn" onClick={invite}>share invite</button></>}
         {!cfg && <button className="lv-btn gold" onClick={() => setSolo(false)}>join room</button>}
         {cfg && <button className="lv-btn" onClick={leave}>leave</button>}
         <button className="lv-btn lv-chat-toggle" onClick={() => setChatOpen(v => !v)}>chat</button>
