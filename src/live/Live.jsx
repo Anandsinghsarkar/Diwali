@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { db, ensureGuest, ref, onValue, push, remove, set } from '../firebase.js'
 
 const WS_URL = import.meta.env.VITE_WS_URL || `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:8787`
-const N_DIYA = 7
+const N_DIYA = 12
 const PALETTE = ['#ff9d0a', '#e8321e', '#d81b78', '#f4efe4', '#2aa84a', '#2f6fe0', '#ffd21f', '#7a3fc0']
 const FLOOR = '#1a141c'
 const S = 900
@@ -534,7 +534,7 @@ export default function Live({ onExit }) {
       setMsgs(Object.entries(value).map(([id, m]) => ({ ...m, id })).sort((a, b) => a.at - b.at).slice(-300))
     }, e => setFirebaseError('Chat sync error: ' + e.message))
     const stateRef = ref(db, 'diwaliRooms/' + cfg.room + '/state/diyas')
-    const stopState = onValue(stateRef, snap => { if (snap.exists() && Array.isArray(snap.val())) setDiyas(snap.val()) })
+    const stopState = onValue(stateRef, snap => { if (snap.exists() && Array.isArray(snap.val())) setDiyas(snap.val()); else set(stateRef, Array(N_DIYA).fill(false)).catch(e => setFirebaseError(e.message)) })
     return () => { stop(); stopState() }
   }, [cfg?.room, firebaseUid])
   const sendLive = useCallback(message => {
