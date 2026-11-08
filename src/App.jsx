@@ -246,6 +246,21 @@ function App() {
     tick();const id=setInterval(tick,1000);return()=>clearInterval(id)
   },[])
   useEffect(()=>{localStorage.setItem('dv-wall',JSON.stringify(wall))},[wall])
+  useEffect(()=>{
+    if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+    const sparkle=(e)=>{
+      const el=document.createElement('span');
+      el.className='magic-cursor-spark';
+      el.textContent=['✦','✧','·','✺'][Math.floor(Math.random()*4)];
+      el.style.left=e.clientX+'px';el.style.top=e.clientY+'px';
+      document.body.appendChild(el);
+      window.setTimeout(()=>el.remove(),750);
+    };
+    let last=0;
+    const move=e=>{const now=Date.now();if(now-last>55){sparkle(e);last=now}};
+    window.addEventListener('pointermove',move,{passive:true});
+    return()=>window.removeEventListener('pointermove',move);
+  },[])
   useEffect(()=>{if(soundOn&&!audioRef.current)audioRef.current=makeAudio();if(!soundOn&&audioRef.current){audioRef.current.close();audioRef.current=null}},[soundOn])
   useEffect(()=>()=>{if(musicOsc.current)musicOsc.current.close();if(audioRef.current)audioRef.current.close()},[])
   const toggleMusic=()=>{
