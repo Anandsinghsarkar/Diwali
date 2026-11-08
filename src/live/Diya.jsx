@@ -127,7 +127,7 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
 
   return <div className="lv-pane">
     <canvas ref={cv} className="lv-diya" onPointerDown={hit} />
-    <div className="lv-cap"><span className="lv-eye">{mine ? 'TAP A DIYA TO LIGHT UP TO IT' : 'TAP THEIR LIT DIYAS TO PUFF THEM OUT'}</span><h2>Diya <em>World</em></h2><p>{fmt(lit)} lit · {mine ? 'your board' : viewName + "'s board"}</p></div>
+    <div className="lv-cap"><span className="lv-eye">{mine ? 'TAP A DIYA TO LIGHT UP TO IT' : couple ? 'TAP TO LIGHT OR BLOW OUT YOUR PARTNER’S DIYAS' : 'TAP THEIR LIT DIYAS TO PUFF THEM OUT'}</span><h2>Diya <em>World</em></h2><p>{fmt(lit)} lit · {mine ? 'your board' : viewName + "'s board"}</p></div>
 
     <div className="lv-score">
       <div className="lv-score-head"><b>Scoreboard</b>{msg && <span>{msg}</span>}</div>
