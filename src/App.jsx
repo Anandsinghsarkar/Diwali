@@ -196,20 +196,22 @@ function GreetingMaker() {
 function PhotoBooth() {
   const [src,setSrc]=useState('')
   const [frame,setFrame]=useState('gold')
+  const [photoFilter,setPhotoFilter]=useState('none')
+  const filters={none:'none',warm:'sepia(.28) saturate(1.25)',festive:'saturate(1.45) contrast(1.08)',mono:'grayscale(1)',glow:'brightness(1.12) saturate(1.3)'}
   const imgRef=useRef(null)
   const download=()=>{
     if(!src)return
     const c=document.createElement('canvas');c.width=900;c.height=900;const x=c.getContext('2d'),img=imgRef.current
     x.fillStyle='#10142d';x.fillRect(0,0,900,900)
     const scale=Math.max(820/img.width,700/img.height),w=img.width*scale,h=img.height*scale
-    x.save();x.beginPath();x.rect(40,40,820,700);x.clip();x.drawImage(img,(900-w)/2,(740-h)/2,w,h);x.restore()
+    x.save();x.beginPath();x.rect(40,40,820,700);x.clip();x.filter=filters[photoFilter]||'none';x.drawImage(img,(900-w)/2,(740-h)/2,w,h);x.filter='none';x.restore()
     x.strokeStyle=frame==='gold'?'#e8b95c':frame==='rainbow'?'#e65acb':'#f6f0df';x.lineWidth=18;x.strokeRect(28,28,844,724)
     x.fillStyle='#fff0c7';x.textAlign='center';x.font='bold 44px Georgia';x.fillText('Happy Diwali ✨',450,830)
     const a=document.createElement('a');a.download='diwaliverse-photo.png';a.href=c.toDataURL('image/png');a.click()
   }
   return <div className="photo-layout"><div className="photo-preview">
-    {src?<><img ref={imgRef} src={src} alt="Your festive photo"/><div className={'photo-frame '+frame}/><span className="photo-caption">HAPPY DIWALI ✨</span></>:<div className="upload-placeholder"><Camera size={42}/><b>Your festive photo goes here</b><span>Upload a picture to preview your frame</span></div>}
-  </div><div className="form-card"><span className="eyebrow">FESTIVE PHOTO BOOTH</span><h3>Frame your memories.</h3><label className="upload-button"><ImageIcon size={18}/> Choose a photo<input type="file" accept="image/*" onChange={e=>{const f=e.target.files?.[0];if(f){const u=URL.createObjectURL(f);setSrc(u)}}}/></label><div className="theme-picker vertical"><span>Choose a frame</span>{['gold','rainbow','pearl'].map(s=><button key={s} className={frame===s?'active':''} onClick={()=>setFrame(s)}>{s}</button>)}</div><button className="btn btn-gold full" disabled={!src} onClick={download}><Download size={16}/> Download photo frame</button><p className="tiny-muted">Your photo is processed in your browser and is not uploaded to a server.</p></div></div>
+    {src?<><img ref={imgRef} src={src} alt="Your festive photo" style={{filter:filters[photoFilter]}}/><div className={'photo-frame '+frame}/><span className="photo-caption">HAPPY DIWALI ✨</span></>:<div className="upload-placeholder"><Camera size={42}/><b>Your festive photo goes here</b><span>Upload a picture to preview your frame</span></div>}
+  </div><div className="form-card"><span className="eyebrow">FESTIVE PHOTO BOOTH</span><h3>Frame your memories.</h3><label className="upload-button"><ImageIcon size={18}/> Choose a photo<input type="file" accept="image/*" onChange={e=>{const f=e.target.files?.[0];if(f){const u=URL.createObjectURL(f);setSrc(u)}}}/></label><div className="theme-picker vertical"><span>Photo effect</span>{Object.keys(filters).map(k=><button key={k} className={photoFilter===k?'active':''} onClick={()=>setPhotoFilter(k)}>{k}</button>)}</div><div className="theme-picker vertical"><span>Choose a frame</span>{['gold','rainbow','pearl'].map(s=><button key={s} className={frame===s?'active':''} onClick={()=>setFrame(s)}>{s}</button>)}</div><button className="btn btn-gold full" disabled={!src} onClick={download}><Download size={16}/> Download photo frame</button><p className="tiny-muted">Your photo is processed in your browser and is not uploaded to a server.</p></div></div>
 }
 
 
@@ -275,7 +277,7 @@ function App() {
   const go=(id)=>{setActive(id);setMobileMenu(false);window.scrollTo({top:0,behavior:'smooth'})}
   const addWish=(e)=>{e.preventDefault();if(!wish.trim())return;setWall([{id:Date.now(),text:wish.trim(),date:new Date().toLocaleDateString('en-IN')} ,...wall].slice(0,30));setWish('')}
   const nav=sections.map(([label,id,Icon])=><button key={id} className={active===id?'nav-link active':'nav-link'} onClick={()=>go(id)}><Icon size={16}/><span>{label}</span></button>)
-  const quizQuestions=[{q:'Which festival is widely known as the Festival of Lights?',a:['Holi','Diwali','Pongal'],correct:1},{q:'What is traditionally lit during Diwali?',a:['Diyas','Snow lanterns','Paper fans'],correct:0},{q:'Which colorful art is often made at the entrance?',a:['Origami','Rangoli','Calligraphy'],correct:1}]
+  const quizQuestions=[{q:'Which festival is widely known as the Festival of Lights?',a:['Holi','Diwali','Pongal'],correct:1},{q:'What is traditionally lit during Diwali?',a:['Diyas','Snow lanterns','Paper fans'],correct:0},{q:'Which colorful art is often made at the entrance?',a:['Origami','Rangoli','Calligraphy'],correct:1},{q:'Which goddess is commonly worshipped by many families during Diwali?',a:['Saraswati','Lakshmi','Parvati'],correct:1},{q:'What is commonly exchanged with family and friends?',a:['Sweets','Winter coats','Seashells'],correct:0},{q:'What do people often decorate their doorways with?',a:['Rangoli','Snow','Shellfish'],correct:0},{q:'Which is a common Diwali greeting?',a:['Happy Onam','Happy Diwali','Merry Holi'],correct:1},{q:'What do rows of diyas symbolize?',a:['Light and hope','Monsoon rain','Harvest tools'],correct:0}]
   const decorItems=[['lights','✨','Fairy lights'],['flowers','🌼','Flowers'],['diyas','🪔','Diyas'],['toran','🏵️','Door toran'],['lanterns','🏮','Lanterns'],['stars','⭐','Stars']]
   return <div className={(dark?'app-shell':'app-shell light-theme')+' theme-'+theme}>
     <header className="topbar"><button className="brand" onClick={()=>go('home')}><span className="brand-mark">🪔</span><span>Diwali<span className="brand-gold">Verse</span><small>THE FESTIVAL OF LIGHTS</small></span></button>
