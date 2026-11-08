@@ -31,13 +31,24 @@ export const auth = app ? getAuth(app) : null
 export const db = app ? getDatabase(app, firebaseConfig.databaseURL) : null
 
 let guestPromise
-export const ensureGuest = () => {
-  if (!auth) return Promise.reject(new Error('Firebase config missing. Add the VITE_FIREBASE_* variables in Vercel and redeploy.'))
-  if (auth.currentUser) return Promise.resolve(auth.currentUser)
+export const ensureGuest = async () => {
+  if (!auth) throw new Error('Firebase config missing. Add all VITE_FIREBASE_* variables in Vercel and redeploy.')
+
+  // Wait for Firebase to restore any locally persisted anonymous session first.
+  if (auth.authStateReady) await auth.authStateReady()
+  if (auth.currentUser) return auth.currentUser
+
   if (!guestPromise) {
-    guestPromise = setPersistence(auth, browserLocalPersistence)
-      .then(() => auth.currentUser || signInAnonymously(auth).then(result => result.user))
-      .catch(error => { guestPromise = null; throw error })
+    guestPromise = (async () => {
+      await setPersistence(auth, browserLocalPersistence)
+      // Re-check after persistence initialization to avoid duplicate sign-in attempts.
+      if (auth.currentUser) return auth.currentUser
+      const result = await signInAnonymously(auth)
+      return result.user
+    })().catch(error => {
+      guestPromise = null
+      throw error
+    })
   }
   return guestPromise
 }
