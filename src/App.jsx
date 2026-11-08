@@ -236,7 +236,7 @@ function App() {
     if(musicOn){musicOsc.current?.close();musicOsc.current=null;setMusicOn(false);return}
     const ctx=makeAudio();if(!ctx)return
     const master=ctx.createGain();master.gain.value=.035;master.connect(ctx.destination)
-    ;[220,277.18,329.63].forEach((hz,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=hz;g.gain.value=i===0?.6:.22;o.connect(g);g.connect(master);o.start()})
+    ;[220,277.18,329.63].forEach((hz,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=hz;g.gain.value = i === 0 ? 0.6 : 0.22;o.connect(g);g.connect(master);o.start()})
     musicOsc.current=ctx;setMusicOn(true)
   }
   const go=(id)=>{setActive(id);setMobileMenu(false);window.scrollTo({top:0,behavior:'smooth'})}
