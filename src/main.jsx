@@ -1,4 +1,4 @@
-import React,{useEffect,useState} from 'react'
+import React,{useEffect,useRef,useState} from 'react'
 import {createRoot} from 'react-dom/client'
 import App from './App.jsx'
 import Live from './live/Live.jsx'
@@ -14,11 +14,14 @@ function Root(){
  const [live,setLive]=useState(route)
  const [session,setSession]=useState(null)
  const [authLoading,setAuthLoading]=useState(true)
+ const wasInRoom=useRef(roomRoute())
 
  useEffect(()=>{
   let alive=true
-  const syncRoute=()=>setLive(route())
+  const syncRoute=()=>{setLive(route());wasInRoom.current=roomRoute()}
+  const handleBack=()=>{if(wasInRoom.current&&!roomRoute()){history.replaceState(history.state,'',location.pathname+location.search+'#live');wasInRoom.current=false;setLive(true)}}
   window.addEventListener('hashchange',syncRoute)
+  window.addEventListener('popstate',handleBack)
   if(!supabaseReady||!supabase){
    setAuthLoading(false)
   }else{
@@ -36,12 +39,14 @@ function Root(){
    return ()=>{
     alive=false
     window.removeEventListener('hashchange',syncRoute)
+    window.removeEventListener('popstate',handleBack)
     subscription.unsubscribe()
    }
   }
   return ()=>{
    alive=false
    window.removeEventListener('hashchange',syncRoute)
+   window.removeEventListener('popstate',handleBack)
   }
  },[])
 
