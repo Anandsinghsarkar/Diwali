@@ -5,7 +5,7 @@ A responsive, interactive Diwali celebration website built with React and Vite. 
 ## Features
 
 - **Magical home page** with festive hero art, floating effects, and a Diwali countdown.
-- **Interactive fireworks canvas** with tap-to-burst effects, automatic show controls, and browser-synthesized sound effects.
+- **Interactive fireworks canvas** with tap-to-burst effects, automatic show controls, Classic / Sparkler / Grand Finale styles, color choices, and browser-synthesized sound effects.
 - **Virtual Diya World** — light individual diyas, light all, or turn them off.
 - **Rangoli Studio** — freehand drawing, color palette, brush size, clear, and PNG download.
 - **Virtual Home Decorator** — toggle fairy lights, flowers, diyas, toran, lanterns, and stars.
@@ -15,6 +15,11 @@ A responsive, interactive Diwali celebration website built with React and Vite. 
 - **Music & Sound** — locally synthesized ambient tones and fireworks effects using the Web Audio API.
 - **Celebration Wall** — post wishes saved locally in the current browser.
 - **Stories & Traditions** — a short introduction to Diwali customs.
+- **Interactive Night Sky** — a starry scene where visitors can release a personal wish.
+- **Surprise Zone** — reveal randomized festive messages and blessings.
+- **Magic cursor trail** — subtle sparkle particles on pointer devices.
+- **Festive themes** — switch between gold, rose, and emerald accent palettes.
+- **Fullscreen mode** — expand the celebration experience.
 
 ## Run locally
 
@@ -45,7 +50,7 @@ Every push to the connected production branch can trigger a new Vercel deploymen
 
 - Browser audio generally requires a visitor gesture before playback. The sound toggle and music play button provide that gesture.
 - Fireworks are visual animations; no real fireworks or physical devices are involved.
-- Wishes are stored in local browser storage and are not a globally synchronized public feed.
+- Celebration Wall wishes are stored in local browser storage and are not a globally synchronized public feed. Night Sky wishes are visual-only and are not sent to a server.
 - Photo processing and greeting/rangoli downloads happen client-side.
 
 ## Tech
