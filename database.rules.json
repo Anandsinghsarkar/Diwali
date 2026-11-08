@@ -5,6 +5,9 @@
     "diwaliRooms": {
       "$room": {
         ".read": "auth != null && $room.matches(/^(DIWALI|FRIEND|LOVE)-[A-Z0-9]{8}$/)",
+        "presence": {
+          "$uid": { ".write": "auth != null && auth.uid === $uid" }
+        },
         "messages": {
           "$messageId": {
             ".write": "auth != null && ((!data.exists() && newData.child('from').val() === auth.uid) || (data.exists() && data.child('from').val() === auth.uid))",
@@ -12,11 +15,10 @@
           }
         },
         "state": {
-          "diyas": {
-            ".write": "auth != null",
-            ".validate": "newData.hasChildren()"
-          }
-        }
+          "diyas": { ".write": "auth != null", ".validate": "newData.hasChildren()" }
+        },
+        "rangoliEvents": { "$eventId": { ".write": "auth != null" } },
+        "fireworks": { "$eventId": { ".write": "auth != null" } }
       }
     }
   }
