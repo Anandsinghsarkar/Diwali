@@ -517,7 +517,6 @@ export default function Live({ onExit }) {
     else if (m.t === 'diya') setDiyas(m.diyas)
     else if (m.t === 'stamps') { for (const s of m.list) stampsRef.current.push(s) }
     else if (m.t === 'rclear') stampsRef.current = []
-    else if (m.t === 'chat') setMsgs(a => [...a, m].slice(-200))
     subs.current.forEach(fn => fn(m))
   }, [])
   const { status, users, me, err, fails, send } = useRoom(cfg, onMsg)
