@@ -101,7 +101,7 @@ function Fireworks({ soundOn }) {
     audio.current = makeAudio()
     raf = requestAnimationFrame(draw)
     return () => { cancelAnimationFrame(raf); window.removeEventListener('resize',resize); audio.current?.close() }
-  }, [auto, soundOn])
+  }, [auto, soundOn, burstMode, burstColor])
 
   const fireAt = (e) => {
     const rect = canvasRef.current.getBoundingClientRect()
