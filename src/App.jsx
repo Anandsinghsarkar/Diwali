@@ -287,8 +287,8 @@ function App() {
   const [active,setActive]=useState('home')
   const [soundOn,setSoundOn]=useState(false)
   const [mobileMenu,setMobileMenu]=useState(false)
-  const [lit,setLit]=useState([true,false,false,false,false,false])
-  const [decor,setDecor]=useState(['lights','flowers'])
+  const [lit,setLit]=useState(()=>{try{return JSON.parse(localStorage.getItem('dv-lit')||'[true,false,false,false,false,false]')}catch{return [true,false,false,false,false,false]}})
+  const [decor,setDecor]=useState(()=>{try{return JSON.parse(localStorage.getItem('dv-decor')||'["lights","flowers"]')}catch{return ['lights','flowers']}})
   const [wish,setWish]=useState('')
   const [wall,setWall]=useState(()=>{try{return JSON.parse(localStorage.getItem('dv-wall')||'[]')}catch{return []}})
   const [score,setScore]=useState(0)
@@ -296,8 +296,8 @@ function App() {
   const [musicOn,setMusicOn]=useState(false)
   const audioRef=useRef(null)
   const musicOsc=useRef(null)
-  const [dark,setDark]=useState(true)
-  const [theme,setTheme]=useState('rainbow')
+  const [dark,setDark]=useState(()=>localStorage.getItem('dv-dark')!=='false')
+  const [theme,setTheme]=useState(()=>localStorage.getItem('dv-theme')||'rainbow')
   const [count,setCount]=useState({days:0,hours:0,minutes:0,seconds:0})
 
   useEffect(()=>{
@@ -305,6 +305,10 @@ function App() {
     tick();const id=setInterval(tick,1000);return()=>clearInterval(id)
   },[])
   useEffect(()=>{localStorage.setItem('dv-wall',JSON.stringify(wall))},[wall])
+  useEffect(()=>{localStorage.setItem('dv-lit',JSON.stringify(lit))},[lit])
+  useEffect(()=>{localStorage.setItem('dv-decor',JSON.stringify(decor))},[decor])
+  useEffect(()=>{localStorage.setItem('dv-dark',String(dark))},[dark])
+  useEffect(()=>{localStorage.setItem('dv-theme',theme)},[theme])
   useEffect(()=>{
     if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
     const sparkle=(e)=>{
