@@ -1,0 +1,20 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "diwaliRooms": {
+      "$room": {
+        ".read": "auth != null && $room.matches(/^DIWALI-[A-Z0-9]{8}$/)",
+        ".write": "auth != null && $room.matches(/^DIWALI-[A-Z0-9]{8}$/)",
+        "messages": {
+          "$messageId": {
+            ".validate": "newData.hasChildren(['from','name','text','kind','at']) && newData.child('from').val() === auth.uid && newData.child('text').isString() && newData.child('text').val().length <= 400 && newData.child('name').isString() && newData.child('name').val().length <= 20 && newData.child('at').isNumber()"
+          }
+        },
+        "state": {
+          "diyas": { ".validate": "newData.isArray() && newData.val().length <= 12" }
+        }
+      }
+    }
+  }
+}
