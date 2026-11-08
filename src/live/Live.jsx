@@ -139,6 +139,8 @@ export default function Live({ onExit }) {
     tap: () => send({ t: 'raceTap' }),
     startRace: () => send({ t: 'race' }),
     blow: (target, n, all, targetName) => send({ t: 'blow', target, n, all, targetName }),
+    partnerSet: (target, n) => send({ t: 'partnerLit', target, set: n }),
+    partnerAdd: (target, n) => send({ t: 'partnerLit', target, add: n }),
   }), [live, send])
 
   const onType = useCallback(() => {
@@ -184,7 +186,7 @@ export default function Live({ onExit }) {
     </header>
     <div className="lv-body">
       <main className="lv-stage">
-        {tabId === 'diya' && <DiyaBoard users={effUsers} players={effPlayers} me={effMe} online={online} live={live} act={act} race={live ? race : null} scores={scores} offset={offset} />}
+        {tabId === 'diya' && <DiyaBoard users={effUsers} players={effPlayers} me={effMe} online={online} live={live} couple={couple} act={act} race={live ? race : null} scores={scores} offset={offset} />}
         {tabId === 'rangoli' && <Rangoli send={send} live={live} stampsRef={stampsRef} sub={sub} lights={lights} />}
         {tabId === 'fw' && <Crackers send={send} sub={sub} couple={couple} />}
         {waiting && <div className="lv-wait">
