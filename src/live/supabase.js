@@ -124,8 +124,7 @@ export function useRoom(cfg, onMsg) {
       }catch(e){if(!dead){setErr(explain(e));setStatus('idle')}}
     })()
     return ()=>{
-      dead=true
-      if(channel){safe(channel.untrack());safe(supabase.removeChannel(channel))}
+      dead=true\n      if(typeof heartbeat!=='undefined')clearInterval(heartbeat)\n      if(channel){safe(channel.untrack());safe(supabase.removeChannel(channel))}
       const c=ctx.current
       if(c){safe(supabase.from('room_members').delete().eq('room_code',c.room).eq('user_id',c.uid));safe(supabase.from('profiles').update({current_room:null,updated_at:new Date().toISOString()}).eq('id',c.uid))}
       ctx.current=null
