@@ -36,6 +36,7 @@ function useRoom(cfg, onMsg) {
       return
     }
     let active = true
+    const joinedAt = Date.now()
     setErr(''); setFails(0); setStatus('connecting')
     const base = 'diwaliRooms/' + cfg.room
     const myPresence = ref(db, base + '/presence/' + cfg.uid)
@@ -74,14 +75,14 @@ function useRoom(cfg, onMsg) {
 
     stopRangoli = onChildAdded(rangoliEvents, snap => {
       const event = snap.val()
-      if (!event || !active) return
+      if (!event || !active || (event.from === cfg.uid && Number(event.at || 0) >= joinedAt)) return
       if (event.t === 'rclear') cb.current({ t: 'rclear' })
       else if (event.t === 'stamps' && Array.isArray(event.list)) cb.current({ t: 'stamps', list: event.list })
     }, e => { if (active) setErr('Rangoli sync failed: ' + e.message) })
 
     stopFireworks = onChildAdded(fireworksEvents, snap => {
       const event = snap.val()
-      if (!event || !active || Date.now() - Number(event.at || 0) > 7000) return
+      if (!event || !active || event.from === cfg.uid || Date.now() - Number(event.at || 0) > 7000) return
       cb.current({ t: 'fire', x: event.x, y: event.y, kind: event.kind, hue: event.hue })
     }, e => { if (active) setErr('Fireworks sync failed: ' + e.message) })
 
