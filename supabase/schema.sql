@@ -28,17 +28,20 @@ create index if not exists room_events_room_created_idx on public.room_events(ro
 -- Couple rooms allow 2 people; Friends rooms allow 12.
 create or replace function public.diwali_check_capacity() returns trigger
 language plpgsql security invoker set search_path=public as $$
-declare m text; n integer;
+declare
+  m text;
+  n integer;
+  room_limit integer;
 begin
- perform pg_advisory_xact_lock(hashtext(new.room_code));
- select mode into m from public.rooms where room_code=new.room_code;
- select count(*) into n from public.room_members where room_code=new.room_code;
- if not exists(select 1 from public.room_members where room_code=new.room_code and user_id=new.user_id)
- and n >= (case when m = 'couple' then 2 else 12 end)
-  then
+  perform pg_advisory_xact_lock(hashtext(new.room_code));
+  select mode into m from public.rooms where room_code = new.room_code;
+  select count(*) into n from public.room_members where room_code = new.room_code;
+  if m = 'couple' then room_limit := 2; else room_limit := 12; end if;
+  if not exists (select 1 from public.room_members where room_code = new.room_code and user_id = new.user_id)
+     and n >= room_limit then
     raise exception 'This room is full.';
   end if;
- return new;
+  return new;
 end $$;
 drop trigger if exists diwali_room_capacity on public.room_members;
 create trigger diwali_room_capacity before insert or update of room_code,user_id on public.room_members
@@ -148,14 +151,17 @@ grant execute on function public.diwali_is_room_member(text) to authenticated;
 
 create or replace function public.diwali_check_capacity() returns trigger
 language plpgsql security definer set search_path=public as $$
-declare m text; n integer;
+declare
+  m text;
+  n integer;
+  room_limit integer;
 begin
   perform pg_advisory_xact_lock(hashtext(new.room_code));
-  select mode into m from public.rooms where room_code=new.room_code;
-  select count(*) into n from public.room_members where room_code=new.room_code;
-  if not exists(select 1 from public.room_members where room_code=new.room_code and user_id=new.user_id)
-     and n >= (case when m = 'couple' then 2 else 12 end)
-  then
+  select mode into m from public.rooms where room_code = new.room_code;
+  select count(*) into n from public.room_members where room_code = new.room_code;
+  if m = 'couple' then room_limit := 2; else room_limit := 12; end if;
+  if not exists (select 1 from public.room_members where room_code = new.room_code and user_id = new.user_id)
+     and n >= room_limit then
     raise exception 'This room is full.';
   end if;
   return new;
