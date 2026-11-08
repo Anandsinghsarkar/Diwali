@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { PER_PAGE, TAU, drawDiya, fit, flick, floorPattern, fmt, rnd } from './common.js'
+import { PER_PAGE, drawDiya, fit, flick, floorPattern, fmt, rnd } from './common.js'
 
 export default function DiyaBoard({ users, players, me, online, live, act, race, scores, offset }) {
   const cv = useRef(null)
   const lay = useRef({ cols: 7, cw: 100, ch: 100, sc: 1, x0: 0, y0: 0 })
   const st = useRef({ lit: 0, pg: 0, view: me })
+  const cool = useRef(false)
+  const [coolUi, setCoolUi] = useState(false)
   const [view, setView] = useState(me)
   const [page, setPage] = useState(0)
   const [bulk, setBulk] = useState('')
@@ -41,8 +43,8 @@ export default function DiyaBoard({ users, players, me, online, live, act, race,
     const frame = t => {
       const [W, H] = fit(c, ctx)
       const cols = W < 700 ? 4 : 7, rows = Math.ceil(PER_PAGE / cols)
-      const cw = W * .92 / cols, ch = H * .64 / rows, sc = Math.max(.3, Math.min(cw / 165, ch / 150))
-      const L = lay.current = { cols, cw, ch, sc, x0: W * .04, y0: H * (W < 700 ? .3 : .26) }
+      const cw = W * .92 / cols, ch = H * .62 / rows, sc = Math.max(.3, Math.min(cw / 165, ch / 150))
+      const L = lay.current = { cols, cw, ch, sc, x0: W * .04, y0: H * (W < 700 ? .3 : .24) }
       const { lit: N, pg: P, view: V } = st.current
       const pos = i => [L.x0 + (i % cols + .5) * cw, L.y0 + (Math.floor(i / cols) + .5) * ch + 8 * sc]
       if (prev.view === V && prev.pg === P && prev.lit > N) {
@@ -90,8 +92,17 @@ export default function DiyaBoard({ users, players, me, online, live, act, race,
     return () => cancelAnimationFrame(raf)
   }, [])
 
+  const viewName = users.find(u => u.id === view)?.name || 'Them'
+  // blow out someone else's diyas; short cooldown so it stays a prank, not a wipe
+  const puff = (n, all, ms) => {
+    if (cool.current || mine || !live) return
+    cool.current = true; setCoolUi(true)
+    act.blow(view, n, all, viewName)
+    setTimeout(() => { cool.current = false; setCoolUi(false) }, ms)
+  }
   const tap = idx => {
-    if (!mine || phaseRef.current === 'count') return
+    if (phaseRef.current === 'count') return
+    if (!mine) { if (idx < lit) puff(1, false, 350); return }
     if (phaseRef.current === 'run') { if (idx === lit) act.tap(); return }
     act.set(idx >= lit ? idx + 1 : idx)
   }
@@ -111,13 +122,12 @@ export default function DiyaBoard({ users, players, me, online, live, act, race,
   const myLit = players[me]?.lit || 0
   const d = other ? myLit - other.lit : 0
   const msg = !live || !other ? '' : d > 0 ? `You lead ${other.name} by ${fmt(d)}` : d < 0 ? `${other.name} leads by ${fmt(-d)}` : 'Dead heat'
-  const viewName = users.find(u => u.id === view)?.name || 'You'
   const rr = ranked.map(u => ({ id: u.id, name: u.name, n: u.sc })).sort((a, b) => b.n - a.n)
   const tie = rr.length > 1 && rr[0].n === rr[1].n
 
   return <div className="lv-pane">
     <canvas ref={cv} className="lv-diya" onPointerDown={hit} />
-    <div className="lv-cap"><span className="lv-eye">{mine ? 'TAP A DIYA TO LIGHT UP TO IT' : 'WATCHING'}</span><h2>Diya <em>World</em></h2><p>{fmt(lit)} lit · {mine ? 'your board' : viewName + "'s board"}</p></div>
+    <div className="lv-cap"><span className="lv-eye">{mine ? 'TAP A DIYA TO LIGHT UP TO IT' : 'TAP THEIR LIT DIYAS TO PUFF THEM OUT'}</span><h2>Diya <em>World</em></h2><p>{fmt(lit)} lit · {mine ? 'your board' : viewName + "'s board"}</p></div>
 
     <div className="lv-score">
       <div className="lv-score-head"><b>Scoreboard</b>{msg && <span>{msg}</span>}</div>
@@ -132,6 +142,7 @@ export default function DiyaBoard({ users, players, me, online, live, act, race,
     </div>
 
     <div className="lv-hud lv-hud-col">
+      {users.length > 1 && <div className="lv-switch">{ranked.map(u => <button key={u.id} className={'lv-chipbtn' + (u.id === view ? ' on' : '')} onClick={() => setView(u.id)}>{u.id === me ? 'My diyas' : u.name + "'s diyas"} · {fmt(u.lit)}</button>)}</div>}
       <div className="lv-pager">
         <button className="lv-btn" disabled={pg <= 0} onClick={() => setPage(pg - 1)}>‹</button>
         <span>Page {fmt(pg + 1)} / {fmt(pages)}</span>
@@ -146,7 +157,14 @@ export default function DiyaBoard({ users, players, me, online, live, act, race,
         {[1, 10, 100, 1000].map(v => <button key={v} className="lv-btn" disabled={!free} onClick={() => act.add(v)}>+{fmt(v)}</button>)}
         <button className="lv-btn" disabled={!free} onClick={() => act.set((pg + 1) * PER_PAGE)}>Light this page</button>
         <button className="lv-btn" disabled={!free} onClick={() => act.set(0)}>Blow out all</button>
-      </div> : <div className="lv-bulk"><span>Viewing {viewName}'s diyas. </span><button className="lv-btn" onClick={() => setView(me)}>back to mine</button></div>}
+      </div> : <div className="lv-bulk">
+        <span>{viewName}'s diyas:</span>
+        <button className="lv-btn" disabled={coolUi || !lit} onClick={() => puff(1, false, 400)}>💨 Blow 1</button>
+        <button className="lv-btn" disabled={coolUi || !lit} onClick={() => puff(10, false, 1500)}>💨 Blow 10</button>
+        <button className="lv-btn" disabled={coolUi || !lit} onClick={() => puff(100, false, 1500)}>💨 Blow 100</button>
+        <button className="lv-btn gold" disabled={coolUi || !lit} onClick={() => puff(0, true, 2500)}>🌬️ Blow all</button>
+        <button className="lv-btn" onClick={() => setView(me)}>back to mine</button>
+      </div>}
     </div>
 
     {phase === 'done' && race && seen !== race.start && <div className="lv-lobby"><div className="lv-card">
