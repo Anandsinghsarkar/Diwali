@@ -80,3 +80,21 @@
 .lv-tools{max-height:38vh}
 .lv-cap h2{font-size:22px}
 }
+
+@media(max-width:600px){
+ .lv{height:100dvh;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+ .lv-top{gap:7px;padding:8px 10px;min-height:54px;flex-wrap:wrap}
+ .lv-brand{font-size:16px}.lv-brand span{display:none}
+ .lv-tabs{order:3;flex-basis:100%;max-width:100%;padding-bottom:2px}
+ .lv-tab{font-size:12px;padding:8px 12px;white-space:nowrap}
+ .lv-right{margin-left:auto;gap:6px}.lv-pill{font-size:10px;padding:5px 8px}.lv-btn{min-height:38px;padding:7px 10px}
+ .lv-body{min-height:0}.lv-stage{min-height:0}
+ .lv-cap{left:12px;top:12px}.lv-cap h2{font-size:20px}.lv-cap p{font-size:12px}
+ .lv-hud{bottom:10px;gap:6px;padding:0 8px}.lv-hud .lv-btn{font-size:11px;padding:8px}
+ .lv-rg{padding:9px;gap:9px;grid-template-rows:minmax(0,1fr) auto}
+ .lv-tools{max-height:29dvh;padding:10px;gap:9px}
+ .lv-side{height:68dvh;max-height:68dvh;padding-bottom:env(safe-area-inset-bottom)}
+ .lv-card{padding:19px;border-radius:16px}.lv-card h2{font-size:24px}
+ .lv-compose{padding:8px 10px}.lv-compose input{font-size:16px}
+ .lv-msg p{font-size:13px}
+}
