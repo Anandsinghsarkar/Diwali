@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 
 const sections = [
-  ['Home', 'home', Sparkles], ['Fireworks', 'fireworks', PartyPopper],
+  ['Home', 'home', Sparkles], ['Fireworks', 'fireworks', PartyPopper], ['Virtual Crackers', 'crackers', Stars],
   ['Diya World', 'diyas', Flame], ['Rangoli Studio', 'rangoli', Palette],
   ['Home Decor', 'decor', House], ['Greeting Maker', 'greetings', Gift],
   ['Photo Booth', 'photo', Camera], ['Games', 'games', Gamepad2],
@@ -129,6 +129,43 @@ function Fireworks({ soundOn }) {
       {showHint && <span className="tap-hint">✦ Tap the sky to launch a burst ✦</span>}
     </div>
     <div className="fireworks-badge">✦ LIVE CANVAS · SOUND {soundOn?'ON':'OFF'} ✦</div>
+  </div>
+}
+
+
+const crackerShowcase = [
+  {id:'sparkler',name:'Phuljhadi',emoji:'✨',kind:'Sparkler trail',description:'A handheld-style sparkling trail, shown here as a touch animation. The digital effect creates tiny bright points that fade gently.',motion:'sparkler',color:'#ffd978',fact:'Sparkling light close to the starting point.'},
+  {id:'fountain',name:'Anar / Fountain',emoji:'🌋',kind:'Upward fountain',description:'A cone-shaped fountain effect that sends a fan of glowing particles upward before they softly fall away.',motion:'fountain',color:'#ffb65c',fact:'A vertical plume with a wide, glittering crown.'},
+  {id:'spinner',name:'Chakri',emoji:'🌀',kind:'Spinning pattern',description:'A ground-level circular pattern represented by a rotating ring of light. This is only a screen animation.',motion:'spinner',color:'#8bdcff',fact:'A circular motion that appears to rotate around its centre.'},
+  {id:'rocket',name:'Sky Rocket',emoji:'🚀',kind:'Ascending streak',description:'A glowing point rises through the night and becomes a distant starburst in this simplified animation.',motion:'rocket',color:'#ff9bc5',fact:'A rising trail followed by a high sky sparkle.'},
+  {id:'flowerpot',name:'Flower Pot',emoji:'🌼',kind:'Compact fountain',description:'A short, dense spray of golden particles blooms outward like a small flower and fades.',motion:'flowerpot',color:'#ffe49a',fact:'A compact burst that opens into a flower-like shape.'},
+  {id:'aerial',name:'Aerial Burst',emoji:'🎆',kind:'Sky burst',description:'A distant circular bloom of colored points expands in the sky, then slowly dims.',motion:'aerial',color:'#c4a5ff',fact:'A bright sky bloom with particles moving outward.'},
+  {id:'ground',name:'Ground Spinner',emoji:'💫',kind:'Rotating glow',description:'A low, circular halo spins in place with a soft luminous trail. The movement is intentionally abstract.',motion:'ground',color:'#83e4bd',fact:'A low spinning ring with a smooth light trail.'},
+  {id:'spark-rain',name:'Spark Rain',emoji:'🌠',kind:'Falling glitter',description:'A gentle shower of tiny lights drifts downward like glittering rain against the night sky.',motion:'rain',color:'#ffad83',fact:'Many small lights drift down and fade out.'}
+];
+function VirtualCrackers(){
+  const [selected,setSelected]=useState('sparkler');
+  const [playing,setPlaying]=useState(false);
+  const [reduced,setReduced]=useState(false);
+  const item=crackerShowcase.find(x=>x.id===selected)||crackerShowcase[0];
+  const replay=()=>{setPlaying(false);requestAnimationFrame(()=>requestAnimationFrame(()=>setPlaying(true)))};
+  return <div className="cracker-lab">
+    <div className="cracker-lab-head"><div><span className="eyebrow">TOUCH · EXPLORE · LEARN</span><h2>A safer way to explore <em>the sparkle.</em></h2><p>Choose a virtual firework card to see a stylized animation and learn what its visual effect looks like.</p></div><div className="safety-chip">✦ DIGITAL SIMULATION ONLY</div></div>
+    <div className="cracker-lab-grid">
+      <div className="cracker-catalog">{crackerShowcase.map(c=><button key={c.id} onClick={()=>{setSelected(c.id);setPlaying(true)}} className={selected===c.id?'cracker-tile selected':'cracker-tile'}><span>{c.emoji}</span><b>{c.name}</b><small>{c.kind}</small><i>Explore effect ↗</i></button>)}</div>
+      <div className="cracker-detail">
+        <div className={'cracker-stage '+item.motion+(playing?' playing':'')} style={{'--cracker-color':item.color}}>
+          <div className="stage-stars">✦　·　✧　　　·　✦　　✧</div><div className="stage-moon">☾</div>
+          <div className="effect-core"><span className="effect-ring"/><span className="effect-burst">✦</span><span className="effect-trail">✧</span></div>
+          <div className="stage-ground"/>
+          <span className="stage-caption">{item.kind.toUpperCase()} · VIRTUAL EFFECT</span>
+        </div>
+        <div className="cracker-info"><div><span className="eyebrow">SELECTED EXPERIENCE</span><h3>{item.emoji} {item.name}</h3><p>{item.description}</p></div><button className="btn btn-gold" onClick={replay}><RotateCcw size={16}/> Replay animation</button></div>
+        <div className="cracker-fact"><span>✦ WHAT YOU'RE SEEING</span><b>{item.fact}</b></div>
+      </div>
+    </div>
+    <div className="cracker-learning"><div><span className="eyebrow">HOW TO UNDERSTAND THE EFFECT</span><h3>Light, motion and a little science.</h3><p>Real fireworks create light and sound through carefully controlled chemical reactions. This website does not reproduce those reactions or explain how to make or ignite fireworks. It uses browser-drawn particles, color, timing and motion to demonstrate the appearance only.</p></div><div className="learning-points"><span>01 <b>Glow</b><small>Brightness changes over time.</small></span><span>02 <b>Motion</b><small>Particles follow animated paths.</small></span><span>03 <b>Fade</b><small>Light gently disappears.</small></span></div></div>
+    <div className="cracker-footnote">Please enjoy fireworks through screen simulations or professionally managed public displays. Never handle or light fireworks yourself.</div>
   </div>
 }
 
@@ -294,6 +331,7 @@ function App() {
       <section className="section-block"><div className="section-heading"><div><span className="eyebrow">EXPLORE THE MAGIC</span><h2>Your festival, <em>your universe.</em></h2></div><button className="text-link" onClick={()=>go('fireworks')}>Explore all <ChevronRight size={16}/></button></div><div className="feature-grid">{sections.slice(1).map(([label,id,Icon],i)=><button key={id} className="feature-card" onClick={()=>go(id)}><span className="feature-icon"><Icon size={22}/></span><span className="feature-number">0{i+1}</span><h3>{label}</h3><p>{['Create a sky full of color.','Bring a little flame to life.','Draw patterns with light.','Dress up your virtual home.','Send a wish from the heart.','Give your memories a festive frame.','Play a little festival challenge.','Set the mood with gentle sounds.','Share a little happiness.','Discover the meaning behind the light.'][i]}</p><span className="feature-arrow"><ChevronRight size={17}/></span></button>)}</div></section>
       <section className="quote-band"><span>“</span><p>May the light within you shine brighter than the lights around you.</p><small>— A DIWALI WISH</small></section></>}
       {active==='fireworks'&&<section className="page-section"><PageTitle eyebrow="THE NIGHT SKY" title="Fireworks" accent="World" desc="A little sparkle goes a long way. Tap anywhere on the canvas and make the night yours."/><Fireworks soundOn={soundOn}/><p className="tiny-muted centered">Sound effects are synthesized in your browser. Turn sound on using the speaker button above.</p></section>}
+      {active==='crackers'&&<section className="page-section"><PageTitle eyebrow="THE VIRTUAL FIREWORK GALLERY" title="Cracker" accent="Explorer" desc="Tap a firework to preview its motion, colors and visual pattern — all safely simulated on your screen."/><VirtualCrackers/></section>}
       {active==='diyas'&&<section className="page-section"><PageTitle eyebrow="LIGHT UP THE MOMENT" title="Diya" accent="World" desc="Every little flame makes the world a little brighter. Tap a diya to light it."/><div className="diya-grid">{lit.map((v,i)=><DiyaCard key={i} index={i} lit={v} onClick={()=>setLit(a=>a.map((x,j)=>j===i?!x:x))}/>)}</div><div className="center-actions"><button className="btn btn-gold" onClick={()=>setLit(lit.map(()=>true))}><Flame size={16}/> Light all diyas</button><button className="btn btn-glass" onClick={()=>setLit(lit.map(()=>false))}>Blow out all</button></div></section>}
       {active==='rangoli'&&<section className="page-section"><PageTitle eyebrow="MAKE SOMETHING BEAUTIFUL" title="Rangoli" accent="Studio" desc="Pick a color, draw a pattern and make your own little piece of festive art."/><RangoliStudio/></section>}
       {active==='decor'&&<section className="page-section"><PageTitle eyebrow="MAKE YOURSELF AT HOME" title="Virtual Home" accent="Decor" desc="Choose your favorite festive touches and decorate this little digital home."/><div className="decor-scene"><div className="decor-stars">✦　 ·　 ✧　　 ✦</div><div className="decor-house"><div className="roof">⌂</div><div className="house-body"><div className="house-window">✧</div><div className="house-door">🪔</div><div className="house-window">✧</div></div><div className="house-floor"> {decor.includes('diyas')?'🪔　🪔　🪔':''} {decor.includes('flowers')?'🌼　🌸　🌼':''} </div></div><div className="decor-effects">{decor.includes('lights')&&<div className="fairy-lights">✦　·　✦　·　✦　·　✦　·　✦</div>}{decor.includes('lanterns')&&<div className="floating-lanterns">🏮　　 🏮　　 🏮</div>}{decor.includes('stars')&&<div className="star-layer">✧　　 ✦　　 ✧　　 ✦</div>}{decor.includes('toran')&&<div className="toran">🌼🌿🌼🌿🌼🌿🌼</div>}</div></div><div className="decor-controls"><h3>Choose your decorations</h3>{decorItems.map(([id,emoji,label])=><button key={id} className={decor.includes(id)?'decor-chip selected':'decor-chip'} onClick={()=>setDecor(a=>a.includes(id)?a.filter(x=>x!==id):[...a,id])}><span>{emoji}</span>{label}{decor.includes(id)&&' ✓'}</button>)}</div></section>}
