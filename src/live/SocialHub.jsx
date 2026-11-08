@@ -11,7 +11,7 @@ export default function SocialHub(){
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[name,setName]=useState('')
  const [error,setError]=useState(''),[notice,setNotice]=useState('')
  const [profile,setProfile]=useState(null),[people,setPeople]=useState([]),[requests,setRequests]=useState([]),[connections,setConnections]=useState([])
- const [busy,setBusy]=useState(''),[search,setSearch]=useState('')
+ const [busy,setBusy]=useState(''),[search,setSearch]=useState(''),[editProfile,setEditProfile]=useState(false),[profileName,setProfileName]=useState('')
  const uid=session?.user?.id
  const load=useCallback(async()=>{
   if(!uid)return
@@ -22,7 +22,7 @@ export default function SocialHub(){
    supabase.from('connections').select('id,user_a,user_b,room_code,created_at').or('user_a.eq.'+uid+',user_b.eq.'+uid)
   ])
   for(const x of [me,p,r,c])if(x.error)throw x.error
-  setProfile(me.data);setPeople(p.data||[]);setRequests(r.data||[]);setConnections(c.data||[])
+  setProfile(me.data);setProfileName(me.data?.display_name||'');setPeople(p.data||[]);setRequests(r.data||[]);setConnections(c.data||[])
  },[uid])
  useEffect(()=>{let alive=true;supabase?.auth.getSession().then(({data})=>{if(alive){setSession(data.session);setLoading(false)}});const {data}=supabase?.auth.onAuthStateChange((_e,s)=>{setSession(s);setLoading(false)})||{data:{subscription:null}};return()=>{alive=false;data.subscription?.unsubscribe()}},[])
  useEffect(()=>{if(!uid)return;let alive=true;load().catch(e=>setError(msg(e)));const ch=supabase.channel('social-'+uid).on('postgres_changes',{event:'*',schema:'public',table:'profiles'},()=>alive&&load().catch(e=>setError(msg(e)))).on('postgres_changes',{event:'*',schema:'public',table:'connection_requests'},()=>alive&&load().catch(e=>setError(msg(e)))).on('postgres_changes',{event:'*',schema:'public',table:'connections'},()=>alive&&load().catch(e=>setError(msg(e)))).subscribe();return()=>{alive=false;supabase.removeChannel(ch)}},[uid,load])
@@ -38,7 +38,16 @@ export default function SocialHub(){
  const sendRequest=id=>act(id,async()=>{const {error}=await supabase.from('connection_requests').insert({sender_id:uid,receiver_id:id,status:'pending'});if(error)throw error;setNotice('Connection request sent.')})
  const accept=id=>act(id,async()=>{const {data,error}=await supabase.rpc('diwali_accept_connection',{p_request_id:id});if(error)throw error;setNotice('Connected! Ab dono users room join kar sakte hain.')})
  const reject=id=>act(id,async()=>{const {error}=await supabase.from('connection_requests').update({status:'rejected'}).eq('id',id).eq('receiver_id',uid);if(error)throw error})
- const logout=async()=>{await supabase.auth.signOut();setProfile(null);setPeople([]);setConnections([]);setRequests([])}
+ const saveProfile=()=>act('profile',async()=>{
+  const display_name=profileName.trim()
+  if(!display_name)throw new Error('Display name cannot be empty.')
+  if(display_name.length>30)throw new Error('Display name must be 30 characters or fewer.')
+  const {data,error}=await supabase.from('profiles').upsert({id:uid,display_name,updated_at:new Date().toISOString()},{onConflict:'id'}).select('*').single()
+  if(error)throw error
+  setProfile(data);setEditProfile(false);setNotice('Profile updated successfully.')
+ })
+ const logout=async()=>{setBusy('logout');try{const {error}=await supabase.auth.signOut();if(error)throw error;setProfile(null);setPeople([]);setConnections([]);setRequests([])}catch(e){setError(msg(e))}finally{setBusy('')}}
+
  const createCustom=()=>act('custom',async()=>{const room=makeCode();const {error}=await supabase.from('rooms').insert({room_code:room,mode:'couple',owner_id:uid});if(error)throw error;goRoom(room,profile?.display_name||'Friend')})
  if(!supabaseReady)return <div className="social-shell"><div className="social-card"><h1>DiwaliVerse</h1><p>Supabase configuration missing. Vercel environment variables check karo.</p></div></div>
  if(loading)return <div className="social-shell"><div className="social-card">Loading…</div></div>
@@ -55,8 +64,19 @@ export default function SocialHub(){
  const pendingIds=new Set(requests.filter(r=>r.status==='pending').map(r=>r.sender_id===uid?r.receiver_id:r.sender_id))
  const filtered=people.filter(p=>(p.display_name||'').toLowerCase().includes(search.toLowerCase())&&!connectedIds.has(p.id))
  const display=p=>p?.display_name||p?.email?.split('@')[0]||'Diwali friend'
- return <div className="social-shell"><header className="social-header"><div className="social-logo">🪔 Diwali<span>Verse</span></div><div className="social-header-right"><span>{display(profile)}</span><button onClick={logout}>Logout</button></div></header>
- <main className="social-main"><section className="social-welcome"><div><span className="social-kicker">YOUR FESTIVAL COMMUNITY</span><h1>Celebrate <em>together.</em></h1><p>Discover everyone, send a connection request, and enter the same live Diya room after they accept.</p></div><button className="social-primary custom-room" onClick={createCustom} disabled={!!busy}>{busy==='custom'?'Creating…':'＋ Create custom room'}</button></section>
+ return <div className="social-shell"><header className="social-header"><div className="social-logo">🪔 Diwali<span>Verse</span></div><div className="social-header-right"><span>{display(profile)}</span><button onClick={logout} disabled={busy==='logout'}>{busy==='logout'?'Logging out…':'Logout'}</button></div></header>
+ <main className="social-main">
+ <section className="social-panel profile-panel">
+  <div className="social-panel-head"><div><span className="social-kicker">YOUR ACCOUNT</span><h2>My Profile</h2></div>
+   {!editProfile&&<button className="social-muted-btn" onClick={()=>{setProfileName(profile?.display_name||'');setEditProfile(true)}}>Edit profile</button>}
+  </div>
+  {editProfile?<form className="profile-edit" onSubmit={e=>{e.preventDefault();saveProfile()}}>
+    <label>Display name<input value={profileName} onChange={e=>setProfileName(e.target.value)} maxLength="30" required/></label>
+    <label>Email address<input value={session?.user?.email||'Email not available'} readOnly/></label>
+    <div className="profile-actions"><button className="social-primary" disabled={busy==='profile'}>{busy==='profile'?'Saving…':'Save changes'}</button><button type="button" className="social-muted-btn" onClick={()=>setEditProfile(false)}>Cancel</button></div>
+   </form>:<div className="profile-view"><div className="social-avatar profile-avatar">{display(profile).slice(0,1).toUpperCase()}</div><div><b>{display(profile)}</b><small>{session?.user?.email||'Email not available'}</small><small>Account active · Login stays saved until you log out</small></div></div>}
+ </section>
+ <section className="social-welcome"><div><span className="social-kicker">YOUR FESTIVAL COMMUNITY</span><h1>Celebrate <em>together.</em></h1><p>Discover everyone, send a connection request, and enter the same live Diya room after they accept.</p></div><button className="social-primary custom-room" onClick={createCustom} disabled={!!busy}>{busy==='custom'?'Creating…':'＋ Create custom room'}</button></section>
  {error&&<div className="social-error">{error}</div>}{notice&&<div className="social-notice">{notice}</div>}
  <div className="social-grid"><section className="social-panel"><div className="social-panel-head"><div><h2>People</h2><small>{people.length} registered users</small></div><input className="social-search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search people"/></div>
  <div className="social-list">{filtered.map(p=><article className="social-person" key={p.id}><div className="social-avatar">{display(p).slice(0,1).toUpperCase()}</div><div className="social-person-info"><b>{display(p)}</b><small>{p.current_room&&Date.now()-new Date(p.updated_at).getTime()<90000?'🟢 In a Diya room now':'⚪ Not in a room'}</small></div>{connectedIds.has(p.id)?null:pendingIds.has(p.id)?<button disabled className="social-muted-btn">Request pending</button>:<button className="social-connect" disabled={!!busy} onClick={()=>sendRequest(p.id)}>Connect</button>}</article>)}{!filtered.length&&<p className="social-empty">No other members found yet.</p>}</div></section>
