@@ -18,6 +18,8 @@ create table if not exists public.connection_requests(
  constraint no_self_request check(sender_id<>receiver_id),
  constraint unique_connection_request unique(sender_id,receiver_id)
 );
+alter table public.connection_requests drop constraint if exists unique_connection_request;
+create unique index if not exists unique_pending_connection_request on public.connection_requests(sender_id,receiver_id) where status='pending';
 create table if not exists public.connections(
  id bigint generated always as identity primary key,
  user_a uuid not null references auth.users(id) on delete cascade,
