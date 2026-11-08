@@ -15,9 +15,12 @@ const safe = p => p?.catch?.(e => console.warn('[diwali]', e.message || e))
 const explain = e => {
   const m = String(e?.message || e || '')
   if (!supabaseReady) return 'Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel, then redeploy.'
-  if (/anonymous|signups not allowed/i.test(m)) return 'Enable Anonymous sign-ins in Supabase Authentication settings.'
-  if (/row-level security|permission denied/i.test(m)) return 'Supabase blocked this request. Run supabase/schema.sql in the Supabase SQL Editor.'
-  return m || 'Could not connect to Supabase.'
+  if (/anonymous|signups not allowed/i.test(m)) return 'Enable Anonymous sign-ins in Supabase Authentication settings. ' + m
+  // Keep the real Postgres/PostgREST error visible instead of replacing every
+  // RLS/permission failure with a misleading instruction to rerun the schema.
+  const details = [e?.code && `Code: ${e.code}`, e?.details && `Details: ${e.details}`, e?.hint && `Hint: ${e.hint}`]
+    .filter(Boolean).join(' | ')
+  return [m, details].filter(Boolean).join(' — ') || 'Could not connect to Supabase.'
 }
 async function guest() {
   if (!supabase) throw new Error(explain())
