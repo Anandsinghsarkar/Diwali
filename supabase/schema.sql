@@ -34,7 +34,10 @@ begin
  select mode into m from public.rooms where room_code=new.room_code;
  select count(*) into n from public.room_members where room_code=new.room_code;
  if not exists(select 1 from public.room_members where room_code=new.room_code and user_id=new.user_id)
- and n >= case when m='couple' then 2 else 12 end then raise exception 'This room is full.'; end if;
+ and n >= (case when m = 'couple' then 2 else 12 end)
+  then
+    raise exception 'This room is full.';
+  end if;
  return new;
 end $$;
 drop trigger if exists diwali_room_capacity on public.room_members;
@@ -151,7 +154,10 @@ begin
   select mode into m from public.rooms where room_code=new.room_code;
   select count(*) into n from public.room_members where room_code=new.room_code;
   if not exists(select 1 from public.room_members where room_code=new.room_code and user_id=new.user_id)
-     and n >= case when m='couple' then 2 else 12 end then raise exception 'This room is full.'; end if;
+     and n >= (case when m = 'couple' then 2 else 12 end)
+  then
+    raise exception 'This room is full.';
+  end if;
   return new;
 end $$;
 
