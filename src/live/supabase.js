@@ -158,6 +158,15 @@ export function useRoom(cfg, onMsg) {
           if(Number(data)>0)await event(room,uid,'chat',{name,to:m.target,kind:'sys',text:`blew out ${Number(data).toLocaleString('en-IN')} of ${m.targetName||'their'}'s diyas 💨`})
           break
         }
+        case 'partnerLit': {
+          const {error}=await supabase.rpc('diwali_partner_update_lit',{
+            p_room_code:room,p_target_id:m.target,
+            p_set_to:m.set==null?null:clampLit(m.set),
+            p_add:m.set==null?clampLit(m.add):0
+          })
+          if(error)throw error
+          break
+        }
         case 'raceTap': {
           const {error}=await supabase.rpc('diwali_race_tap',{p_room_code:room,p_user_id:uid})
           if(error)throw error;break
