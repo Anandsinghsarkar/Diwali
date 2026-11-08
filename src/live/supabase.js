@@ -78,6 +78,10 @@ export function useRoom(cfg, onMsg) {
         emit({t:'players',players:values.players||{}})
         emit({t:'race',race:values.race||null})
         emit({t:'raceScores',scores:values.raceScores||{}})
+        const {data:rangoliRows,error:rangoliError}=await supabase.from('room_events').select('payload')
+          .eq('room_code',room).eq('event_type','rangoli').order('id',{ascending:true}).limit(500)
+        if(rangoliError)throw rangoliError
+        for(const row of rangoliRows||[])if(Array.isArray(row.payload?.list))emit({t:'stamps',list:row.payload.list})
         const since=new Date().toISOString()
         const {data:chats,error:chatError}=await supabase.from('room_events').select('id,sender_id,payload,created_at')
           .eq('room_code',room).eq('event_type','chat').gte('created_at',since).order('id').limit(200)
