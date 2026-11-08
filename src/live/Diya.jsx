@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { PER_PAGE, drawDiya, fit, flick, floorPattern, fmt, rnd } from './common.js'
 
-export default function DiyaBoard({ users, players, me, online, live, act, race, scores, offset }) {
+export default function DiyaBoard({ users, players, me, online, live, couple = false, act, race, scores, offset }) {
   const cv = useRef(null)
   const lay = useRef({ cols: 7, cw: 100, ch: 100, sc: 1, x0: 0, y0: 0 })
   const st = useRef({ lit: 0, pg: 0, view: me })
@@ -102,7 +102,7 @@ export default function DiyaBoard({ users, players, me, online, live, act, race,
   }
   const tap = idx => {
     if (phaseRef.current === 'count') return
-    if (!mine) { if (idx < lit) puff(1, false, 350); return }
+    if (!mine) { if (idx < lit) puff(1, false, 350); else if (couple && live) act.partnerSet(view, idx + 1); return }
     if (phaseRef.current === 'run') { if (idx === lit) act.tap(); return }
     act.set(idx >= lit ? idx + 1 : idx)
   }
@@ -159,11 +159,17 @@ export default function DiyaBoard({ users, players, me, online, live, act, race,
         <button className="lv-btn" disabled={!free} onClick={() => act.set(0)}>Blow out all</button>
       </div> : <div className="lv-bulk">
         <span>{viewName}'s diyas:</span>
+        {couple && <><input inputMode="numeric" placeholder="partner diya total" value={bulk} onChange={e => setBulk(e.target.value.replace(/[^0-9]/g, '').slice(0, 13))} />
+          <button className="lv-btn gold" disabled={!n || !live} onClick={() => act.partnerAdd(view, n)}>🪔 Light +{fmt(n)}</button>
+          <button className="lv-btn" disabled={!bulk || !live} onClick={() => act.partnerSet(view, n)}>Set total</button>
+          {[1, 10, 100, 1000].map(v => <button key={v} className="lv-btn" disabled={!live} onClick={() => act.partnerAdd(view, v)}>+{fmt(v)}</button>)}
+          <button className="lv-btn" disabled={!live} onClick={() => act.partnerSet(view, (pg + 1) * PER_PAGE)}>Light this page</button>
+        </>}
         <button className="lv-btn" disabled={coolUi || !lit} onClick={() => puff(1, false, 400)}>💨 Blow 1</button>
         <button className="lv-btn" disabled={coolUi || !lit} onClick={() => puff(10, false, 1500)}>💨 Blow 10</button>
         <button className="lv-btn" disabled={coolUi || !lit} onClick={() => puff(100, false, 1500)}>💨 Blow 100</button>
         <button className="lv-btn gold" disabled={coolUi || !lit} onClick={() => puff(0, true, 2500)}>🌬️ Blow all</button>
-        <button className="lv-btn" onClick={() => setView(me)}>back to mine</button>
+        <button className="lv-btn" onClick={() => { setBulk(""); setView(me) }}>back to mine</button>
       </div>}
     </div>
 
