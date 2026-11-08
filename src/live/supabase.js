@@ -70,7 +70,8 @@ export function useRoom(cfg, onMsg) {
         const {error:memberError}=await supabase.from('room_members').upsert({room_code:room,user_id:uid,name:cfg.name,hue:hueOf(uid)},{onConflict:'room_code,user_id'})
         if(memberError)throw memberError
         if(dead)return
-        ctx.current={room,uid,name:cfg.name,channel:null}\n        await supabase.from('profiles').update({current_room:room,updated_at:new Date().toISOString()}).eq('id',uid)
+        ctx.current={room,uid,name:cfg.name,channel:null}
+        await supabase.from('profiles').update({current_room:room,updated_at:new Date().toISOString()}).eq('id',uid)
         setMe(uid); emit({t:'init',id:uid,mode:roomRow.mode})
         await loadMembers()
         const {data:rows,error:stateError}=await supabase.from('room_state').select('state_key,value').eq('room_code',room)
@@ -124,7 +125,9 @@ export function useRoom(cfg, onMsg) {
       }catch(e){if(!dead){setErr(explain(e));setStatus('idle')}}
     })()
     return ()=>{
-      dead=true\n      clearInterval(heartbeat)\n      if(channel){safe(channel.untrack());safe(supabase.removeChannel(channel))}
+      dead=true
+      clearInterval(heartbeat)
+      if(channel){safe(channel.untrack());safe(supabase.removeChannel(channel))}
       const c=ctx.current
       if(c){safe(supabase.from('room_members').delete().eq('room_code',c.room).eq('user_id',c.uid));safe(supabase.from('profiles').update({current_room:null,updated_at:new Date().toISOString()}).eq('id',c.uid))}
       ctx.current=null
