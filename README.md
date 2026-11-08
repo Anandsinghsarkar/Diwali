@@ -63,6 +63,35 @@ Made with ✨ for the Festival of Lights.
 
 ## Firebase Live Together
 
-Enable Authentication > Sign-in method > Anonymous and create a Realtime Database. Publish `database.rules.json` in Firebase Console > Realtime Database > Rules. The app uses Firebase Anonymous Authentication without requiring visitors to create accounts or passwords. Chat is stored at `diwaliRooms/{roomCode}/messages`; Clear removes messages for everyone. Shared diya state is stored at `diwaliRooms/{roomCode}/state/diyas`.
+Live rooms use Firebase Realtime Database and Firebase Anonymous Authentication. The browser Firebase config is read from Vercel build-time environment variables; no Firebase Admin SDK or service-account key belongs in the frontend.
 
-The participant roster, rangoli events and fireworks still use the existing WebSocket live server. Deploy that server and set `VITE_WS_URL` to its secure WebSocket URL for those features. Firebase client config is public; database rules and anonymous auth provide access control.
+### Vercel environment variables
+
+Add these in **Vercel → Project → Settings → Environment Variables** (Production, Preview and Development as needed), then trigger a new deployment:
+
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_DATABASE_URL`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
+
+Use the values from Firebase Console → Project settings → General → Your apps (Web app), and the exact Realtime Database URL from Realtime Database. Vite embeds `VITE_*` values during the build, so changing them requires a fresh Vercel deployment.
+
+### Firebase Console setup
+
+1. In Firebase Console → Authentication → Sign-in method, enable **Anonymous**.
+2. Create or open the Realtime Database in the same Firebase project.
+3. Open Realtime Database → Rules, paste the repository's `database.rules.json`, and Publish.
+4. Confirm the database URL in `VITE_FIREBASE_DATABASE_URL` matches that database's URL.
+
+### Rooms
+
+- Friends rooms generate a `FRIEND-XXXXXXXX` code.
+- Love rooms generate a `LOVE-XXXXXXXX` code and use the two-person/couple presentation.
+- Share the room code or the generated invite link. A recipient can open the invite link or enter the same code and choose the matching room type.
+- Firebase chat and shared diya state sync through Realtime Database without a separate WebSocket server.
+- The participant roster, rangoli drawing and shared fireworks effects still use the optional WebSocket server. Set `VITE_WS_URL` to its secure WebSocket URL for those features.
+
+Firebase web configuration is public by design; database rules and Firebase Authentication protect access. Never put a service-account JSON, private key, or Firebase Admin credential in a `VITE_*` variable.
