@@ -59,3 +59,10 @@ React · Vite · CSS · Canvas 2D · Web Audio API · Lucide React
 
 ---
 Made with ✨ for the Festival of Lights.
+
+
+## Firebase Live Together
+
+Enable Authentication > Sign-in method > Anonymous and create a Realtime Database. Publish `database.rules.json` in Firebase Console > Realtime Database > Rules. The app uses Firebase Anonymous Authentication without requiring visitors to create accounts or passwords. Chat is stored at `diwaliRooms/{roomCode}/messages`; Clear removes messages for everyone. Shared diya state is stored at `diwaliRooms/{roomCode}/state/diyas`.
+
+The participant roster, rangoli events and fireworks still use the existing WebSocket live server. Deploy that server and set `VITE_WS_URL` to its secure WebSocket URL for those features. Firebase client config is public; database rules and anonymous auth provide access control.
