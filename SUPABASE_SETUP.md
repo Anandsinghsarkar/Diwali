@@ -7,7 +7,7 @@ The app no longer uses Firebase. The Live Together experience uses Supabase Auth
 1. Open your Supabase project.
 2. Go to **SQL Editor**.
 3. Open this repository's `supabase/schema.sql`, paste the complete file, and run it once.
-4. In **Authentication → Providers**, enable **Anonymous** sign-ins.
+4. In **Authentication → Providers**, enable the sign-in provider used by your account flow.
 
 The SQL creates the room, member, room-state, and room-event tables, enables RLS, adds room-capacity checks, and configures the Realtime publication.
 
@@ -30,3 +30,7 @@ Add them for the environments you deploy (Production, Preview, and Development a
 - `room_events`: chat messages, shared Rangoli strokes, and fireworks events.
 
 Room codes, room limits (2 for Couple and 12 for Friends), persistent anonymous sessions, online presence, typing indicators, chat, diya scoreboard, race, Rangoli, and shared fireworks are handled by the Supabase adapter.
+
+## Couple partner diya controls
+
+Run `supabase/partner_diya.sql` in the SQL Editor (also included at the end of `supabase/schema.sql`). In a Couple room, either partner can select the other person's board, light additional diyas, set a total, or blow out lit diyas. This permission is limited to the two members of that Couple room; Friends rooms keep their existing behavior.
