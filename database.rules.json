@@ -12,7 +12,7 @@
           }
         },
         "state": {
-          "diyas": { ".validate": "newData.isArray() && newData.val().length <= 12" }
+          "diyas": { ".validate": "newData.hasChildren()" }
         }
       }
     }
