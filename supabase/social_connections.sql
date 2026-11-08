@@ -4,11 +4,11 @@
 create table if not exists public.profiles(
  id uuid primary key references auth.users(id) on delete cascade,
  display_name text not null default 'Diwali Friend',
- email text,
  current_room text,
  updated_at timestamptz not null default now(),
  created_at timestamptz not null default now()
 );
+alter table public.profiles drop column if exists email;
 create table if not exists public.connection_requests(
  id bigint generated always as identity primary key,
  sender_id uuid not null references auth.users(id) on delete cascade,
