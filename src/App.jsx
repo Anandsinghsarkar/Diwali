@@ -106,8 +106,8 @@ function Fireworks({ soundOn }) {
   const fireAt = (e) => {
     const rect = canvasRef.current.getBoundingClientRect()
     const x = e.clientX - rect.left, y = e.clientY - rect.top
-    const hue = Math.random()*360
-    const count = 82
+    const hue = burstColor === 'gold' ? 42 : burstColor === 'blue' ? 205 : burstColor === 'pink' ? 325 : Math.random()*360
+    const count = burstMode === 'sparkler' ? 32 : burstMode === 'grand' ? 170 : 90
     for (let i=0;i<count;i++) {
       const a = Math.PI*2*i/count, speed = 1.2+Math.random()*4.6
       particles.current.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:1,decay:.009+Math.random()*.01,hue,size:1+Math.random()*2.5})
