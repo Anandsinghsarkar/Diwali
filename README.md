@@ -1,1 +1,56 @@
-# Diwali
+# 🪔 DiwaliVerse — Experience the Magic of Lights
+
+A responsive, interactive Diwali celebration website built with React and Vite. Designed to run as a static frontend on Vercel with no required login, database, paid API, or environment variables.
+
+## Features
+
+- **Magical home page** with festive hero art, floating effects, and a Diwali countdown.
+- **Interactive fireworks canvas** with tap-to-burst effects, automatic show controls, and browser-synthesized sound effects.
+- **Virtual Diya World** — light individual diyas, light all, or turn them off.
+- **Rangoli Studio** — freehand drawing, color palette, brush size, clear, and PNG download.
+- **Virtual Home Decorator** — toggle fairy lights, flowers, diyas, toran, lanterns, and stars.
+- **Greeting Card Maker** — personalize a greeting, choose a theme, download as PNG, and share.
+- **Festive Photo Booth** — local photo preview, frame choices, and PNG download. Photos are not uploaded.
+- **Diwali Quiz** — a small interactive festival quiz with score and restart.
+- **Music & Sound** — locally synthesized ambient tones and fireworks effects using the Web Audio API.
+- **Celebration Wall** — post wishes saved locally in the current browser.
+- **Stories & Traditions** — a short introduction to Diwali customs.
+
+## Run locally
+
+```bash
+npm install
+npm run dev
+```
+
+Create a production build:
+
+```bash
+npm run build
+npm run preview
+```
+
+## Deploy to Vercel
+
+1. Import this GitHub repository in Vercel.
+2. Keep the project root directory as the repository root.
+3. Vercel should detect **Vite** automatically.
+4. Build command: `npm run build`
+5. Output directory: `dist`
+6. No environment variables are required.
+
+Every push to the connected production branch can trigger a new Vercel deployment.
+
+## Notes
+
+- Browser audio generally requires a visitor gesture before playback. The sound toggle and music play button provide that gesture.
+- Fireworks are visual animations; no real fireworks or physical devices are involved.
+- Wishes are stored in local browser storage and are not a globally synchronized public feed.
+- Photo processing and greeting/rangoli downloads happen client-side.
+
+## Tech
+
+React · Vite · CSS · Canvas 2D · Web Audio API · Lucide React
+
+---
+Made with ✨ for the Festival of Lights.
