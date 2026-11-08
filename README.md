@@ -63,7 +63,7 @@ Made with ✨ for the Festival of Lights.
 
 ## Firebase Live Together
 
-Live rooms use Firebase Realtime Database and Firebase Anonymous Authentication. The browser Firebase config is read from Vercel build-time environment variables; no Firebase Admin SDK or service-account key belongs in the frontend.
+All shared-room features use Firebase Realtime Database and Firebase Anonymous Authentication. The browser Firebase config is read from Vercel build-time environment variables; no Firebase Admin SDK or service-account key belongs in the frontend.
 
 ### Vercel environment variables
 
@@ -86,12 +86,13 @@ Use the values from Firebase Console → Project settings → General → Your a
 3. Open Realtime Database → Rules, paste the repository's `database.rules.json`, and Publish.
 4. Confirm the database URL in `VITE_FIREBASE_DATABASE_URL` matches that database's URL.
 
-### Rooms
+### Rooms and shared features
 
-- Friends rooms generate a `FRIEND-XXXXXXXX` code.
-- Love rooms generate a `LOVE-XXXXXXXX` code and use the two-person/couple presentation.
-- Share the room code or the generated invite link. A recipient can open the invite link or enter the same code and choose the matching room type.
-- Firebase chat and shared diya state sync through Realtime Database without a separate WebSocket server.
-- The participant roster, rangoli drawing and shared fireworks effects still use the optional WebSocket server. Set `VITE_WS_URL` to its secure WebSocket URL for those features.
+- Friends rooms generate a `FRIEND-XXXXXXXX` code (up to 12 participants).
+- Love rooms generate a `LOVE-XXXXXXXX` code (up to 2 participants).
+- Share the room code or invite link. Recipients can open the invite link or enter the same code.
+- Firebase synchronizes chat, participant presence, all 12 diyas, rangoli strokes/clear events and virtual fireworks.
+- Presence is removed when a participant leaves or disconnects. Chat clearing removes only the current user's messages.
+- Old `DIWALI-XXXXXXXX` invite codes remain accepted for compatibility.
 
 Firebase web configuration is public by design; database rules and Firebase Authentication protect access. Never put a service-account JSON, private key, or Firebase Admin credential in a `VITE_*` variable.
