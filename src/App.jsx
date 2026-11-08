@@ -3,7 +3,7 @@ import {
   Sparkles, Flame, Palette, Gift, Camera, Music2, Volume2, VolumeX,
   Moon, Sun, Menu, X, Download, Share2, Play, Pause, RotateCcw,
   House, Gamepad2, Globe2, Heart, WandSparkles, Stars, PartyPopper,
-  Image as ImageIcon, Send, Flower2, Lightbulb, Trophy, ChevronRight
+  Image as ImageIcon, Send, Flower2, Lightbulb, Trophy, ChevronRight, Maximize2, Gift as GiftIcon, MoonStar
 } from 'lucide-react'
 
 const sections = [
@@ -12,7 +12,7 @@ const sections = [
   ['Home Decor', 'decor', House], ['Greeting Maker', 'greetings', Gift],
   ['Photo Booth', 'photo', Camera], ['Games', 'games', Gamepad2],
   ['Music', 'music', Music2], ['Celebration Wall', 'wall', Globe2],
-  ['Traditions', 'traditions', Heart]
+  ['Traditions', 'traditions', Heart], ['Night Sky', 'night', MoonStar], ['Surprise Zone', 'surprise', GiftIcon]
 ]
 
 function makeAudio() {
@@ -48,6 +48,8 @@ function Fireworks({ soundOn }) {
   const audio = useRef(null)
   const [auto, setAuto] = useState(true)
   const [showHint, setShowHint] = useState(true)
+  const [burstMode, setBurstMode] = useState('classic')
+  const [burstColor, setBurstColor] = useState('rainbow')
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -65,11 +67,11 @@ function Fireworks({ soundOn }) {
       rockets.current.push({ x, y, tx: canvas.clientWidth * (0.14 + Math.random() * 0.72), ty: canvas.clientHeight * (0.12 + Math.random() * 0.48), hue: Math.random() * 360, speed: 5 + Math.random() * 2 })
     }
     const explode = (r) => {
-      const count = 54 + Math.floor(Math.random() * 45)
+      const count = burstMode === 'sparkler' ? 28 : burstMode === 'grand' ? 150 : 75
       for (let i = 0; i < count; i++) {
         const angle = Math.PI * 2 * i / count
         const speed = 1.2 + Math.random() * 4.2
-        particles.current.push({ x:r.x, y:r.y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, life:1, decay:0.008+Math.random()*0.012, hue:r.hue, size:1+Math.random()*2.3 })
+        particles.current.push({ x:r.x, y:r.y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, life:1, decay:0.008+Math.random()*0.012, hue:burstColor==='gold'?42:burstColor==='blue'?205:burstColor==='pink'?325:r.hue, size:1+Math.random()*2.3 })
       }
       if (soundOn) burstSound(audio.current)
     }
@@ -119,6 +121,7 @@ function Fireworks({ soundOn }) {
       <div className="eyebrow"><span className="live-dot"/> THE SKY IS YOUR CANVAS</div>
       <h2>Paint the night<br/><em>with light.</em></h2>
       <p>Tap anywhere in the sky to create your own colorful burst.</p>
+      <div className="firework-options"><label>Style <select value={burstMode} onChange={e=>setBurstMode(e.target.value)}><option value="classic">Classic</option><option value="sparkler">Sparkler</option><option value="grand">Grand finale</option></select></label><label>Color <select value={burstColor} onChange={e=>setBurstColor(e.target.value)}><option value="rainbow">Rainbow</option><option value="gold">Golden</option><option value="blue">Blue</option><option value="pink">Pink</option></select></label></div>
       <div className="button-row">
         <button className="btn btn-gold" onClick={()=>setAuto(v=>!v)}>{auto?<Pause size={16}/>:<Play size={16}/>} {auto?'Pause show':'Start auto show'}</button>
         <button className="btn btn-glass" onClick={()=>{particles.current=[];rockets.current=[]}}><RotateCcw size={16}/> Clear sky</button>
@@ -209,6 +212,18 @@ function PhotoBooth() {
   </div><div className="form-card"><span className="eyebrow">FESTIVE PHOTO BOOTH</span><h3>Frame your memories.</h3><label className="upload-button"><ImageIcon size={18}/> Choose a photo<input type="file" accept="image/*" onChange={e=>{const f=e.target.files?.[0];if(f){const u=URL.createObjectURL(f);setSrc(u)}}}/></label><div className="theme-picker vertical"><span>Choose a frame</span>{['gold','rainbow','pearl'].map(s=><button key={s} className={frame===s?'active':''} onClick={()=>setFrame(s)}>{s}</button>)}</div><button className="btn btn-gold full" disabled={!src} onClick={download}><Download size={16}/> Download photo frame</button><p className="tiny-muted">Your photo is processed in your browser and is not uploaded to a server.</p></div></div>
 }
 
+
+function NightSky() {
+  const [wish,setWish]=useState('');
+  const [sent,setSent]=useState(false);
+  return <div className="night-sky-card"><div className="night-sky-stars">{Array.from({length:70},(_,i)=><i key={i} style={{left:((i*37)%97)+'%',top:((i*61)%91)+'%',animationDelay:(i%7)+'s'}}/>)}</div><div className="night-moon">☾</div><div className="night-sky-content"><span className="eyebrow">MAKE A LITTLE WISH</span><h2>A sky full of<br/><em>possibilities.</em></h2><p>Write a wish and send it into this little digital night sky.</p><form onSubmit={e=>{e.preventDefault();if(wish.trim()){setSent(true);setWish('')}}}><input value={wish} onChange={e=>{setWish(e.target.value);setSent(false)}} maxLength="100" placeholder="My Diwali wish is..."/><button className="btn btn-gold" type="submit">Release wish ✦</button></form>{sent&&<div className="wish-sent">✦ Your wish is floating among the stars.</div>}</div></div>
+}
+function SurpriseZone() {
+  const messages=['You bring your own kind of light. Keep shining. ✨','May your home be filled with laughter, warmth and mithai. 🪔','A new beginning is waiting just around the corner. 🌸','Your kindness is someone else’s festival light. 💛','Wishing you a year full of bright ideas and beautiful moments. 🎆'];
+  const [message,setMessage]=useState('');
+  return <div className="surprise-wrap"><div className="surprise-box"><div className="surprise-gift">🎁</div><span className="eyebrow">A LITTLE FESTIVE SURPRISE</span><h2>{message?'A message just for you':'Something special is waiting.'}</h2><p>{message||'Tap the gift to unwrap a little Diwali happiness.'}</p><button className="btn btn-gold" onClick={()=>setMessage(messages[Math.floor(Math.random()*messages.length)])}>{message?'Open another surprise':'Unwrap your surprise'} <GiftIcon size={16}/></button></div></div>
+}
+
 function App() {
   const [active,setActive]=useState('home')
   const [soundOn,setSoundOn]=useState(false)
@@ -223,6 +238,7 @@ function App() {
   const audioRef=useRef(null)
   const musicOsc=useRef(null)
   const [dark,setDark]=useState(true)
+  const [theme,setTheme]=useState('gold')
   const [count,setCount]=useState({days:0,hours:0,minutes:0,seconds:0})
 
   useEffect(()=>{
@@ -239,15 +255,17 @@ function App() {
     ;[220,277.18,329.63].forEach((hz,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=hz;g.gain.value = i === 0 ? 0.6 : 0.22;o.connect(g);g.connect(master);o.start()})
     musicOsc.current=ctx;setMusicOn(true)
   }
+  const toggleFullscreen=()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});else document.exitFullscreen?.()}
+  const cycleTheme=()=>setTheme(t=>t==='gold'?'rose':t==='rose'?'emerald':'gold')
   const go=(id)=>{setActive(id);setMobileMenu(false);window.scrollTo({top:0,behavior:'smooth'})}
   const addWish=(e)=>{e.preventDefault();if(!wish.trim())return;setWall([{id:Date.now(),text:wish.trim(),date:new Date().toLocaleDateString('en-IN')} ,...wall].slice(0,30));setWish('')}
   const nav=sections.map(([label,id,Icon])=><button key={id} className={active===id?'nav-link active':'nav-link'} onClick={()=>go(id)}><Icon size={16}/><span>{label}</span></button>)
   const quizQuestions=[{q:'Which festival is widely known as the Festival of Lights?',a:['Holi','Diwali','Pongal'],correct:1},{q:'What is traditionally lit during Diwali?',a:['Diyas','Snow lanterns','Paper fans'],correct:0},{q:'Which colorful art is often made at the entrance?',a:['Origami','Rangoli','Calligraphy'],correct:1}]
   const decorItems=[['lights','✨','Fairy lights'],['flowers','🌼','Flowers'],['diyas','🪔','Diyas'],['toran','🏵️','Door toran'],['lanterns','🏮','Lanterns'],['stars','⭐','Stars']]
-  return <div className={dark?'app-shell':'app-shell light-theme'}>
+  return <div className={(dark?'app-shell':'app-shell light-theme')+' theme-'+theme}>
     <header className="topbar"><button className="brand" onClick={()=>go('home')}><span className="brand-mark">🪔</span><span>Diwali<span className="brand-gold">Verse</span><small>THE FESTIVAL OF LIGHTS</small></span></button>
       <nav className="desktop-nav">{nav}</nav>
-      <div className="top-actions"><button className="icon-btn" title="Toggle theme" onClick={()=>setDark(v=>!v)}>{dark?<Sun size={18}/>:<Moon size={18}/>}</button><button className="icon-btn" title="Toggle sound" onClick={()=>setSoundOn(v=>!v)}>{soundOn?<Volume2 size={18}/>:<VolumeX size={18}/>}</button><button className="mobile-menu-btn" onClick={()=>setMobileMenu(v=>!v)}>{mobileMenu?<X/>:<Menu/>}</button></div>
+      <div className="top-actions"><button className="icon-btn" title="Toggle theme" onClick={()=>setDark(v=>!v)}>{dark?<Sun size={18}/>:<Moon size={18}/>}</button><button className="icon-btn" title="Toggle sound" onClick={()=>setSoundOn(v=>!v)}>{soundOn?<Volume2 size={18}/>:<VolumeX size={18}/>}</button><button className="icon-btn" title="Change festive theme" onClick={cycleTheme}><Palette size={18}/></button><button className="icon-btn" title="Fullscreen" onClick={toggleFullscreen}><Maximize2 size={17}/></button><button className="mobile-menu-btn" onClick={()=>setMobileMenu(v=>!v)}>{mobileMenu?<X/>:<Menu/>}</button></div>
     </header>
     {mobileMenu&&<div className="mobile-nav">{nav}</div>}
     <main>
@@ -268,6 +286,8 @@ function App() {
       {active==='music'&&<section className="page-section"><PageTitle eyebrow="SET THE MOOD" title="Music &" accent="Sounds" desc="A gentle ambient tone made right here in your browser. No audio files or external music services needed."/><div className="music-card"><div className="music-art"><div className="music-orbit"/>🪔</div><div className="music-info"><span className="eyebrow">DIWALI AMBIENCE · SYNTH</span><h3>Golden Hour</h3><p>A soft, layered ambient chord to accompany your celebration.</p><button className="btn btn-gold" onClick={toggleMusic}>{musicOn?<Pause size={17}/>:<Play size={17}/>} {musicOn?'Pause ambience':'Play ambience'}</button><small>Use the top speaker control for fireworks sound effects.</small></div></div></section>}
       {active==='wall'&&<section className="page-section"><PageTitle eyebrow="A WORLD FULL OF WISHES" title="Celebration" accent="Wall" desc="Leave a little light for the next visitor. Wishes are saved only in this browser."/><div className="wall-layout"><form className="wall-form" onSubmit={addWish}><span className="eyebrow">ADD YOUR WISH</span><h3>Share a little joy.</h3><textarea placeholder="Wishing everyone a bright and beautiful Diwali..." value={wish} onChange={e=>setWish(e.target.value)} maxLength="180"/><div className="wall-form-bottom"><small>{wish.length}/180 characters</small><button className="btn btn-gold" type="submit"><Send size={15}/> Post wish</button></div></form><div className="wish-list">{wall.length?wall.map(w=><article className="wish-card" key={w.id}><span>✦</span><p>{w.text}</p><small>{w.date} · A visitor's wish</small></article>):<div className="empty-wall"><Stars size={34}/><b>Your wall is waiting for its first wish.</b><span>Be the first to add a little sparkle.</span></div>}</div></div></section>}
       {active==='traditions'&&<section className="page-section"><PageTitle eyebrow="THE MEANING BEHIND THE LIGHT" title="Stories &" accent="Traditions" desc="Discover some of the beautiful customs and stories celebrated during Diwali across India."/><div className="tradition-grid">{[['🪔','The Festival of Lights','Homes and public spaces glow with rows of lamps, symbolizing hope, warmth and the triumph of light.'],['🌸','Lakshmi Puja','Many families offer prayers for well-being and prosperity, decorating their homes with flowers and lamps.'],['🎨','Rangoli','Colorful patterns at entrances welcome guests and bring creativity into the celebration.'],['🍬','Sharing Sweets','Families and friends exchange sweets and greetings as a gesture of affection and togetherness.'],['🏡','New Beginnings','For many, Diwali is a time to refresh homes, reconnect with loved ones and begin anew.'],['🌍','Many Traditions','Diwali is celebrated in different ways across regions and communities, each with its own stories and customs.']].map(([emoji,title,desc])=><article className="tradition-card" key={title}><span>{emoji}</span><h3>{title}</h3><p>{desc}</p></article>)}</div></section>}
+      {active==='night'&&<section className="page-section"><PageTitle eyebrow="A QUIET MOMENT OF MAGIC" title="Interactive" accent="Night Sky" desc="Add a wish to your own little universe of stars."/><NightSky/></section>}
+      {active==='surprise'&&<section className="page-section"><PageTitle eyebrow="A GIFT OF GOOD VIBES" title="Surprise" accent="Zone" desc="A small surprise, wrapped with festive wishes."/><SurpriseZone/></section>}
     </main>
     <footer className="footer"><div className="footer-brand">🪔 Diwali<span>Verse</span></div><p>A little magic. A lot of light. Made to celebrate together.</p><div className="footer-links">{sections.slice(1,6).map(([l,id])=><button key={id} onClick={()=>go(id)}>{l}</button>)}</div><small>© {new Date().getFullYear()} DiwaliVerse · A digital celebration of light</small></footer>
   </div>
