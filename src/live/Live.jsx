@@ -4,7 +4,7 @@ import { useRoom, supabase } from './supabase.js'
 import DiyaBoard from './Diya.jsx'
 import Rangoli from './Rangoli.jsx'
 import Crackers from './Crackers.jsx'
-import { clean, clampLit, genCode } from './common.js'
+import { clean, clampLit, genCode, applyOp } from './common.js'
 
 const SAVE = 'dv-room'
 const loadSaved = () => { try { return JSON.parse(localStorage.getItem(SAVE) || 'null') } catch { return null } }
@@ -98,7 +98,7 @@ export default function Live({ onExit }) {
   const [players, setPlayers] = useState({})
   const [race, setRace] = useState(null)
   const [scores, setScores] = useState({})
-  const [soloLit, setSoloLit] = useState(0)
+  const [soloBoard, setSoloBoard] = useState({ p: 0, lit: 0, holes: {}, extras: {}, flame: 'natural' })
   const [copied, setCopied] = useState('')
   const stampsRef = useRef([]), subs = useRef(new Set()), meRef = useRef(null), openRef = useRef(false)
   const typingT = useRef(0), typingOff = useRef(0), toastT = useRef(0)
@@ -134,8 +134,10 @@ export default function Live({ onExit }) {
   useEffect(() => { if (chatOpen) setUnread(0) }, [chatOpen])
 
   const act = useMemo(() => ({
-    set: n => { n = clampLit(n); if (live) send({ t: 'lit', set: n }); else setSoloLit(n) },
-    add: n => { if (live) send({ t: 'lit', add: n }); else setSoloLit(v => clampLit(v + n)) },
+    set: n => { n = clampLit(n); if (live) send({ t: 'lit', set: n }); else setSoloBoard(v => applyOp(v, { k: 'set', n })) },
+    add: n => { if (live) send({ t: 'lit', add: n }); else setSoloBoard(v => applyOp(v, { k: 'add', n })) },
+    diya: (target, index, action) => { if (live) send({ t: 'diya', target, index, action }); else setSoloBoard(v => applyOp(v, { k: action, i: index })) },
+    flame: (target, flame) => { if (live) send({ t: 'diya', target, action: 'flame', flame }); else setSoloBoard(v => applyOp(v, { k: 'flame', f: flame })) },
     tap: () => send({ t: 'raceTap' }),
     startRace: () => send({ t: 'race' }),
     blow: (target, n, all, targetName) => send({ t: 'blow', target, n, all, targetName }),
@@ -151,7 +153,7 @@ export default function Live({ onExit }) {
   }, [send])
 
   const effUsers = live ? users : [{ id: 'solo', name: name.trim() || 'You', hue: 40 }]
-  const effPlayers = live ? players : { solo: { lit: soloLit } }
+  const effPlayers = live ? players : { solo: soloBoard }
   const effMe = live ? me : 'solo'
   const totalLit = Object.values(effPlayers).reduce((a, p) => a + (p?.lit || 0), 0)
   const lights = totalLit >= 1000 ? 4 : totalLit >= 100 ? 3 : totalLit >= 10 ? 2 : totalLit >= 1 ? 1 : 0
