@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { PER_PAGE, drawDiya, fit, flick, floorPattern, fmt, rnd } from './common.js'
+import { PER_PAGE, drawDiya, fit, flick, floorPattern, fmt, rnd, isOn, extentOf } from './common.js'
 
 export default function DiyaBoard({ users, players, me, online, live, couple = false, act, race, scores, offset }) {
   const cv = useRef(null)
   const lay = useRef({ cols: 7, cw: 100, ch: 100, sc: 1, x0: 0, y0: 0 })
   const st = useRef({ lit: 0, pg: 0, view: me })
   const cool = useRef(false)
+  const playersRef = useRef(players)
+  playersRef.current = players
   const [coolUi, setCoolUi] = useState(false)
   const [view, setView] = useState(me)
   const [page, setPage] = useState(0)
@@ -15,11 +17,14 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
   const [seen, setSeen] = useState(0)
 
   useEffect(() => { setView(v => users.some(u => u.id === v) ? v : me) }, [users, me])
-  const lit = players[view]?.lit || 0
+  const board = players[view] || { lit: 0 }
+  const lit = board.lit || 0
+  const extent = extentOf(board)
+  const flame = board.flame || 'natural'
   const mine = view === me
-  const pages = Math.max(1, Math.ceil((lit + 1) / PER_PAGE))
+  const pages = Math.max(1, Math.ceil(Math.max(1, extent) / PER_PAGE))
   const pg = Math.min(page, pages - 1)
-  const front = Math.floor(lit / PER_PAGE)
+  const front = Math.floor(Math.max(0, extent - 1) / PER_PAGE)
   useEffect(() => { setPage(front) }, [view, front])
   st.current = { lit, pg, view }
 
@@ -38,7 +43,7 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
   useEffect(() => {
     const c = cv.current, ctx = c.getContext('2d')
     const pat = ctx.createPattern(floorPattern(), 'repeat')
-    const smoke = [], embers = [], prev = { view: null, pg: -1, lit: 0 }
+    const smoke = [], embers = [], prev = { view: null, pg: -1, on: [] }
     let raf = 0
     const frame = t => {
       const [W, H] = fit(c, ctx)
@@ -47,11 +52,15 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
       const L = lay.current = { cols, cw, ch, sc, x0: W * .04, y0: H * (W < 700 ? .3 : .24) }
       const { lit: N, pg: P, view: V } = st.current
       const pos = i => [L.x0 + (i % cols + .5) * cw, L.y0 + (Math.floor(i / cols) + .5) * ch + 8 * sc]
-      if (prev.view === V && prev.pg === P && prev.lit > N) {
-        for (let a = N; a < prev.lit; a++) { const i = a - P * PER_PAGE; if (i >= 0 && i < PER_PAGE && smoke.length < 300) { const [x, y] = pos(i); for (let k = 0; k < 6; k++) smoke.push({ x: x + rnd(-4, 4) * sc, y: y - 20 * sc, vx: rnd(-.2, .2), vy: -rnd(.4, 1), life: 1, r: rnd(8, 16) * sc }) } }
+      const currentOn = Array.from({ length: PER_PAGE }, (_, i) => isOn(playersRef.current[V], P * PER_PAGE + i))
+      if (prev.view === V && prev.pg === P) {
+        for (let i = 0; i < PER_PAGE; i++) if (prev.on[i] && !currentOn[i] && smoke.length < 300) {
+          const [x, y] = pos(i)
+          for (let k = 0; k < 7; k++) smoke.push({ x: x + rnd(-4, 4) * sc, y: y - 20 * sc, vx: rnd(-.25, .25), vy: -rnd(.4, 1), life: 1, r: rnd(8, 16) * sc })
+        }
       }
-      prev.view = V; prev.pg = P; prev.lit = N
-      const on = i => P * PER_PAGE + i < N
+      prev.view = V; prev.pg = P; prev.on = currentOn
+      const on = i => currentOn[i]
 
       ctx.globalCompositeOperation = 'source-over'
       ctx.fillStyle = pat; ctx.fillRect(0, 0, W, H)
@@ -69,7 +78,7 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
       ctx.globalCompositeOperation = 'source-over'
       for (let i = 0; i < PER_PAGE; i++) {
         const [x, y] = pos(i)
-        drawDiya(ctx, x, y, sc, on(i), t, i)
+        drawDiya(ctx, x, y, sc, on(i), t, P * PER_PAGE + i, playersRef.current[V]?.flame || 'natural')
         ctx.fillStyle = 'rgba(246,236,214,.38)'; ctx.font = `${Math.max(9, 12 * sc * 1.4)}px Inter,sans-serif`; ctx.textAlign = 'center'
         ctx.fillText(fmt(P * PER_PAGE + i + 1), x, y + 74 * sc)
       }
@@ -94,17 +103,19 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
 
   const viewName = users.find(u => u.id === view)?.name || 'Them'
   // blow out someone else's diyas; short cooldown so it stays a prank, not a wipe
-  const puff = (n, all, ms) => {
+  const puff = (index, ms = 450) => {
     if (cool.current || mine || !live) return
     cool.current = true; setCoolUi(true)
-    act.blow(view, n, all, viewName)
+    act.diya(view, index, 'blow')
     setTimeout(() => { cool.current = false; setCoolUi(false) }, ms)
   }
   const tap = idx => {
     if (phaseRef.current === 'count') return
-    if (!mine) { if (idx < lit) puff(1, false, 350); else if (couple && live) act.partnerSet(view, idx + 1); return }
-    if (phaseRef.current === 'run') { if (idx === lit) act.tap(); return }
-    act.set(idx >= lit ? idx + 1 : idx)
+    const on = isOn(board, idx)
+    if (!mine && !couple) { if (on) puff(idx); return }
+    if (phaseRef.current === 'run' && mine) { if (!on && idx === extent) act.tap(); return }
+    if (!mine && !live) return
+    act.diya(view, idx, on ? 'blow' : 'light')
   }
   const hit = e => {
     const b = cv.current.getBoundingClientRect(), x = e.clientX - b.left, y = e.clientY - b.top, L = lay.current
@@ -127,7 +138,7 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
 
   return <div className="lv-pane">
     <canvas ref={cv} className="lv-diya" onPointerDown={hit} />
-    <div className="lv-cap"><span className="lv-eye">{mine ? 'TAP A DIYA TO LIGHT UP TO IT' : couple ? 'TAP TO LIGHT OR BLOW OUT YOUR PARTNER’S DIYAS' : 'TAP THEIR LIT DIYAS TO PUFF THEM OUT'}</span><h2>Diya <em>World</em></h2><p>{fmt(lit)} lit · {mine ? 'your board' : viewName + "'s board"}</p></div>
+    <div className="lv-cap"><span className="lv-eye">{mine ? 'TAP EACH DIYA TO LIGHT OR EXTINGUISH IT' : couple ? 'TAP A PARTNER DIYA TO TOGGLE ITS FLAME' : 'TAP ONE LIT DIYA TO EXTINGUISH ONLY THAT ONE'}</span><h2>Diya <em>World</em></h2><p>{fmt(lit)} lit · {mine ? 'your board' : viewName + "'s board"}</p></div>
 
     <div className="lv-score">
       <div className="lv-score-head"><b>Scoreboard</b>{msg && <span>{msg}</span>}</div>
@@ -150,6 +161,7 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
         <input className="lv-mini" inputMode="numeric" placeholder="go to page" value={jump} onChange={e => setJump(e.target.value.replace(/[^0-9]/g, '').slice(0, 12))} onKeyDown={e => { if (e.key === 'Enter' && jump) { setPage(Math.max(0, Math.min(pages - 1, Number(jump) - 1))); setJump('') } }} />
         <button className="lv-btn" onClick={() => setPage(front)}>latest</button>
       </div>
+      <div className="lv-flame-picker"><span>Flame</span>{[['natural','🟠','Natural'],['rainbow','🌈','Rainbow'],['blue','🔵','Blue'],['pink','💗','Pink'],['green','🟢','Green'],['violet','🟣','Violet']].map(([id,emoji,label])=><button key={id} title={label} className={flame===id?'on':''} disabled={!mine && !couple} onClick={()=>act.flame(view,id)}>{emoji}</button>)}</div>
       {mine ? <div className="lv-bulk">
         <input inputMode="numeric" placeholder="type any number, e.g. 500" value={bulk} disabled={!free} onChange={e => setBulk(e.target.value.replace(/[^0-9]/g, '').slice(0, 13))} />
         <button className="lv-btn gold" disabled={!free || !n} onClick={() => act.add(n)}>Light +{fmt(n)}</button>
@@ -165,10 +177,10 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
           {[1, 10, 100, 1000].map(v => <button key={v} className="lv-btn" disabled={!live} onClick={() => act.partnerAdd(view, v)}>+{fmt(v)}</button>)}
           <button className="lv-btn" disabled={!live} onClick={() => act.partnerSet(view, (pg + 1) * PER_PAGE)}>Light this page</button>
         </>}
-        <button className="lv-btn" disabled={coolUi || !lit} onClick={() => puff(1, false, 400)}>💨 Blow 1</button>
-        <button className="lv-btn" disabled={coolUi || !lit} onClick={() => puff(10, false, 1500)}>💨 Blow 10</button>
-        <button className="lv-btn" disabled={coolUi || !lit} onClick={() => puff(100, false, 1500)}>💨 Blow 100</button>
-        <button className="lv-btn gold" disabled={coolUi || !lit} onClick={() => puff(0, true, 2500)}>🌬️ Blow all</button>
+        <button className="lv-btn" disabled={coolUi || !lit} onClick={() => puff(Math.max(0, extent - 1), 400)}>💨 Blow 1</button>
+        <button className="lv-btn" disabled={coolUi || !lit} onClick={() => { for(let k=0;k<10;k++){const i=Math.max(0,extent-1-k);if(isOn(board,i))act.diya(view,i,'blow')} }}>💨 Blow 10</button>
+        <button className="lv-btn" disabled={coolUi || !lit} onClick={() => { for(let k=0;k<100;k++){const i=Math.max(0,extent-1-k);if(isOn(board,i))act.diya(view,i,'blow')} }}>💨 Blow 100</button>
+        <button className="lv-btn gold" disabled={coolUi || !lit} onClick={() => act.blow(view, 0, true, viewName)}>🌬️ Blow all</button>
         <button className="lv-btn" onClick={() => { setBulk(""); setView(me) }}>back to mine</button>
       </div>}
     </div>
