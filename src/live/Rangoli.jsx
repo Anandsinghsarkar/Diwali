@@ -25,7 +25,8 @@ export default function Rangoli({ send, live, stampsRef, sub, lights }) {
   const apply = useCallback(s => {
     const ctx = cv.current.getContext('2d'), [nx, ny, c, r, sy, mi, seed] = s
     const px = nx * S - S / 2, py = ny * S - S / 2
-    const color = c < 0 ? FLOOR : PALETTE[Math.max(0, Math.min(7, c))]
+    const rainbow = c === PALETTE.length
+    const color = c < 0 ? FLOOR : PALETTE[Math.max(0, Math.min(PALETTE.length - 1, c))]
     const n = Math.max(6, Math.round(r * 1.15))
     for (let k = 0; k < sy; k++) {
       const a = TAU * k / sy, ca = Math.cos(a), sa = Math.sin(a)
@@ -37,7 +38,7 @@ export default function Rangoli({ send, live, stampsRef, sub, lights }) {
           const ang = rng() * TAU, d = r * Math.sqrt(rng()), w = .7 + rng() * 1.6, al = .72 + rng() * .28, sh = rng()
           const gx = S / 2 + qx + Math.cos(ang) * d, gy = S / 2 + qy + Math.sin(ang) * d
           if (c >= 0 && sh < .45) { ctx.globalAlpha = .35; ctx.fillStyle = '#000'; ctx.fillRect(gx + .8, gy + 1, w, w) }
-          ctx.globalAlpha = al; ctx.fillStyle = color; ctx.fillRect(gx, gy, w, w)
+          ctx.globalAlpha = al; ctx.fillStyle = rainbow ? `hsl(${Math.floor(rng() * 360)} 100% 58%)` : color; ctx.fillRect(gx, gy, w, w)
           if (c >= 0 && sh > .82) { ctx.globalAlpha = .4; ctx.fillStyle = '#fff'; ctx.fillRect(gx, gy, w * .5, w * .5) }
         }
       }
@@ -119,7 +120,7 @@ export default function Rangoli({ send, live, stampsRef, sub, lights }) {
     </div></div>
     <div className="lv-tools">
       <div><span className="lv-eye">RANGOLI · {live ? 'LIVE' : 'SOLO'}</span><h2 style={{ fontFamily: 'Georgia,serif', fontWeight: 400, margin: '4px 0' }}>Pour the <em style={{ color: '#e8b95c' }}>colour</em></h2></div>
-      <div className="lv-sw">{PALETTE.map((c, i) => <button key={c} style={{ background: c, color: c }} className={!erase && col === i ? 'on' : ''} onClick={() => { setCol(i); setErase(false) }} aria-label={'colour ' + (i + 1)} />)}</div>
+      <div className="lv-sw">{PALETTE.map((c, i) => <button key={c} style={{ background: c, color: c }} className={!erase && col === i ? 'on' : ''} onClick={() => { setCol(i); setErase(false) }} aria-label={'colour ' + (i + 1)} />)}<button className={!erase && col === PALETTE.length ? "on lv-rainbow-swatch" : "lv-rainbow-swatch"} onClick={() => { setCol(PALETTE.length); setErase(false) }} aria-label="Rainbow colour" title="Rainbow">🌈</button></div>
       <label>Powder size {size}<input type="range" min="3" max="30" value={size} onChange={e => setSize(+e.target.value)} /></label>
       <label>Symmetry<select value={sym} onChange={e => setSym(+e.target.value)}>{[[1, 'Off'], [4, '4-fold'], [6, '6-fold'], [8, '8-fold'], [12, '12-fold']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
       <button className={'lv-btn' + (mir ? ' on' : '')} onClick={() => setMir(v => !v)}>Mirror {mir ? 'on' : 'off'}</button>
