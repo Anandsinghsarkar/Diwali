@@ -43,6 +43,9 @@ export function useRoom(cfg, onMsg) {
   const [me,setMe]=useState(null), [err,setErr]=useState(''), [fails,setFails]=useState(0), [offset]=useState(0)
   const cb=useRef(onMsg); cb.current=onMsg
   const ctx=useRef(null)
+  // Serialize room mutations so rapid diya taps cannot race each other or
+  // overwrite a newer board snapshot with an older in-flight update.
+  const actionQueue=useRef(Promise.resolve())
 
   useEffect(()=>{
     let dead=false, channel=null, heartbeat=0
@@ -183,7 +186,9 @@ export function useRoom(cfg, onMsg) {
         default:break
       }
     }
-    safe(run())
+    const task=actionQueue.current.then(run,run)
+    actionQueue.current=task.catch(()=>{})
+    safe(task)
   },[])
   return {status,users,online,me,err,fails,offset,send}
 }
