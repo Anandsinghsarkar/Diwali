@@ -147,7 +147,7 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
       const next = Math.max(0, Math.min(pages - 1, Math.floor((e.currentTarget.scrollTop + h * .35) / h)))
       setPage(old => old === next ? old : next)
     }}>
-      <div className="lv-diya-track" style={{ height: `${pages * 100}%` }}>
+      <div className="lv-diya-track" style={{ height: `${pages * 100}%`, "--pages": pages }}>
         <canvas ref={cv} className="lv-diya" onPointerDown={hit} />
       </div>
     </div>
