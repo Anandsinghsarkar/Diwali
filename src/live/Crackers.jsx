@@ -8,7 +8,7 @@ const HUES = [['Random', -1], ['Multi', -2], ['Rainbow', -3], ['Gold', 42], ['Re
 
 export default function Crackers({ send, sub, couple }) {
   const cv = useRef(null), skyRef = useRef(null), api = useRef({})
-  const [kind, setKind] = useState(couple ? 'heart' : 'random'), [hue, setHue] = useState(-1), [auto, setAuto] = useState(false), [sound, setSound] = useState(true)
+  const [kind, setKind] = useState(couple ? 'heart' : 'random'), [hue, setHue] = useState(-1), [auto, setAuto] = useState(false), [sound, setSound] = useState(true), [controlsVisible, setControlsVisible] = useState(true)
   const opt = useRef({}); opt.current = { kind, hue, sound }
   const sendRef = useRef(send); sendRef.current = send
 
@@ -233,8 +233,8 @@ export default function Crackers({ send, sub, couple }) {
   return <div className="lv-fw">
     <canvas ref={skyRef} />
     <canvas ref={cv} className="lv-fw-top" onPointerDown={fireAt} />
-    <div className="lv-cap"><span className="lv-eye">TAP THE SKY · SOUND {sound ? 'ON' : 'OFF'}</span><h2>Night <em>sky</em></h2><p>Ground crackers go off where you tap. Everyone in the room sees yours.</p></div>
-    <div className="lv-hud">
+    <div className="lv-cap"><span className="lv-eye">TAP THE SKY · SOUND {sound ? 'ON' : 'OFF'}</span><div className="lv-fw-title-row"><h2>Night <em>sky</em></h2><button className="lv-fw-toggle" onClick={() => setControlsVisible(v => !v)} aria-expanded={controlsVisible}>{controlsVisible ? "Hide controls" : "Show controls"}</button></div><p>Ground crackers go off where you tap. Everyone in the room sees yours.</p></div>
+    {controlsVisible && <div className="lv-hud">
       {kinds.map(k => <button key={k} className={'lv-btn' + (kind === k ? ' on' : '')} onClick={() => setKind(k)}>{LABEL[k]}</button>)}
       <span style={{ width: '100%' }} />
       {HUES.map(([l, v]) => <button key={l} className={'lv-btn' + (hue === v ? ' on' : '')} onClick={() => setHue(v)}>{l}</button>)}
@@ -242,6 +242,6 @@ export default function Crackers({ send, sub, couple }) {
       <button className={'lv-btn' + (auto ? ' on' : '')} onClick={() => { api.current.ensureAudio?.(); setAuto(v => !v) }}>Auto show</button>
       <button className="lv-btn gold" onClick={finale}>Grand finale</button>
       <button className="lv-btn" onClick={() => setSound(v => !v)}>Sound {sound ? 'on' : 'off'}</button>
-    </div>
+    </div>}
   </div>
 }
