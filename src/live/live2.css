@@ -64,3 +64,6 @@
 .lv .lv-fw-title-row h2{margin:4px 0}
 .lv .lv-fw-toggle{flex:0 0 auto;border:1px solid rgba(232,185,92,.55);border-radius:999px;padding:9px 15px;background:rgba(8,10,25,.88);color:var(--ink);font-size:12px;font-weight:650;white-space:nowrap;backdrop-filter:blur(8px)}
 .lv .lv-fw-toggle:active{transform:scale(.96)}
+
+.lv .lv-chat-error{margin:6px 12px;padding:9px 11px;border:1px solid rgba(255,105,105,.45);border-radius:10px;background:rgba(120,25,35,.18);color:#ffb7b7;font-size:12px;overflow-wrap:anywhere}
+.lv .lv-compose button:disabled{opacity:.55;cursor:not-allowed}
