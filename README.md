@@ -40,6 +40,7 @@ The website is optimized for Android mobile browsers:
    - `supabase/schema.sql`
    - `supabase/social_connections.sql`
    - `supabase/partner_diya.sql` (enables partner diya controls in Couple rooms)
+   - `supabase/individual_diya.sql` (enables one-by-one diya extinguishing and rainbow flame styles)
    - If you encounter the `room_members` RLS 42501 error, run `supabase/fix_room_members_rls.sql`.
 4. Configure these environment variables in your local `.env` and Vercel:
    - `VITE_SUPABASE_URL`
