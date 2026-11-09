@@ -186,9 +186,17 @@ export function useRoom(cfg, onMsg) {
         default:break
       }
     }
+    // Chat, typing, fireworks and Rangoli inserts must not wait behind a
+    // long queue of diya mutations or bulk actions.
+    if (m.t === 'chat' || m.t === 'typing' || m.t === 'fire' || m.t === 'stamps') {
+      const task = Promise.resolve().then(run)
+      safe(task)
+      return task
+    }
     const task=actionQueue.current.then(run,run)
     actionQueue.current=task.catch(()=>{})
     safe(task)
+    return task
   },[])
   return {status,users,online,me,err,fails,offset,send}
 }
