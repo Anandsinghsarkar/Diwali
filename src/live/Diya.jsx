@@ -110,10 +110,8 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
     setTimeout(() => { cool.current = false; setCoolUi(false) }, ms)
   }
   const tap = idx => {
-    if (phaseRef.current === 'count') return
     const on = isOn(board, idx)
     if (!mine && !couple) { if (on) puff(idx); return }
-    if (phaseRef.current === 'run' && mine) { if (!on && idx === extent) act.tap(); return }
     if (!mine && !live) return
     act.diya(view, idx, on ? 'blow' : 'light')
   }
@@ -126,7 +124,7 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
   }
 
   const n = Math.min(1e12, Math.floor(Number(bulk) || 0))
-  const free = mine && phase !== 'run' && phase !== 'count'
+  const free = mine
   const ranked = users.map(u => ({ ...u, lit: players[u.id]?.lit || 0, sc: scores[u.id] || 0 })).sort((a, b) => b.lit - a.lit)
   const top = Math.max(1, ranked[0]?.lit || 0)
   const other = ranked.find(u => u.id !== me)
@@ -147,9 +145,6 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
         <div><div className="lv-sname">{i === 0 && u.lit > 0 && ranked.length > 1 && u.lit > ranked[1].lit ? '👑 ' : ''}{u.name}{u.id === me ? ' (you)' : ''}{online[u.id] ? <em className="lv-dot" /> : null}</div><div className="lv-bar"><span style={{ width: (u.lit / top * 100) + '%' }} /></div></div>
         <b>{fmt(u.lit)}</b>
       </div>)}
-      {live && (phase === 'none' || phase === 'done') && <button className="lv-btn gold" onClick={act.startRace}>⚡ 60s sprint</button>}
-      {phase === 'count' && <div className="lv-race">Starting in {cd}…</div>}
-      {phase === 'run' && <div className="lv-race">{remain}s left · sprint {fmt(scores[me] || 0)} · tap only the next unlit diya</div>}
     </div>
 
     <div className="lv-hud lv-hud-col">
