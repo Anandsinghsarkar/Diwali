@@ -185,11 +185,6 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
       </div>}
     </div>
 
-    {phase === 'done' && race && seen !== race.start && <div className="lv-lobby"><div className="lv-card">
-      <span className="lv-eye">SPRINT OVER</span>
-      <h2>{rr.length > 1 && !tie ? <>{rr[0].name} <em>wins</em></> : tie ? <>It's a <em>tie</em></> : <>Your <em>sprint</em></>}</h2>
-      {rr.map(r => <p key={r.id}>{r.name}: <b>{fmt(r.n)}</b> diyas in 60 seconds</p>)}
-      <button className="lv-btn gold big" onClick={() => setSeen(race.start)}>Nice</button>
-    </div></div>}
+
   </div>
 }
