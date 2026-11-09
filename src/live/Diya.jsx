@@ -3,6 +3,7 @@ import { PER_PAGE, drawDiya, fit, flick, floorPattern, fmt, rnd, isOn, extentOf 
 
 export default function DiyaBoard({ users, players, me, online, live, couple = false, act, race, scores, offset }) {
   const cv = useRef(null)
+  const scrollRef = useRef(null)
   const lay = useRef({ cols: 7, cw: 100, ch: 100, sc: 1, x0: 0, y0: 0 })
   const st = useRef({ lit: 0, pg: 0, view: me })
   const cool = useRef(false)
@@ -25,7 +26,13 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
   const pages = Math.max(1, Math.ceil(Math.max(1, extent) / PER_PAGE))
   const pg = Math.min(page, pages - 1)
   const front = Math.floor(Math.max(0, extent - 1) / PER_PAGE)
-  useEffect(() => { setPage(front) }, [view, front])
+  useEffect(() => { setPage(front) }, [view])
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const target = pg * el.clientHeight
+    if (Math.abs(el.scrollTop - target) > 2) el.scrollTo({ top: target, behavior: 'auto' })
+  }, [pg, pages])
   st.current = { lit, pg, view }
 
   useEffect(() => {
@@ -135,7 +142,15 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
   const tie = rr.length > 1 && rr[0].n === rr[1].n
 
   return <div className="lv-pane">
-    <canvas ref={cv} className="lv-diya" onPointerDown={hit} />
+    <div ref={scrollRef} className="lv-diya-scroll" onScroll={e => {
+      const h = e.currentTarget.clientHeight || 1
+      const next = Math.max(0, Math.min(pages - 1, Math.floor((e.currentTarget.scrollTop + h * .35) / h)))
+      setPage(old => old === next ? old : next)
+    }}>
+      <div className="lv-diya-track" style={{ height: `${pages * 100}%` }}>
+        <canvas ref={cv} className="lv-diya" onPointerDown={hit} />
+      </div>
+    </div>
     <div className="lv-cap"><span className="lv-eye">{mine ? 'TAP EACH DIYA TO LIGHT OR EXTINGUISH IT' : couple ? 'TAP A PARTNER DIYA TO TOGGLE ITS FLAME' : 'TAP ONE LIT DIYA TO EXTINGUISH ONLY THAT ONE'}</span><h2>Diya <em>World</em></h2><p>{fmt(lit)} lit · {mine ? 'your board' : viewName + "'s board"}</p></div>
 
     <div className="lv-score">
@@ -151,7 +166,7 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
       {users.length > 1 && <div className="lv-switch">{ranked.map(u => <button key={u.id} className={'lv-chipbtn' + (u.id === view ? ' on' : '')} onClick={() => setView(u.id)}>{u.id === me ? 'My diyas' : u.name + "'s diyas"} · {fmt(u.lit)}</button>)}</div>}
       <div className="lv-pager">
         <button className="lv-btn" disabled={pg <= 0} onClick={() => setPage(pg - 1)}>‹</button>
-        <span>Page {fmt(pg + 1)} / {fmt(pages)}</span>
+        <span>Scroll diyas · Page {fmt(pg + 1)} / {fmt(pages)}</span>
         <button className="lv-btn" disabled={pg >= pages - 1} onClick={() => setPage(pg + 1)}>›</button>
         <input className="lv-mini" inputMode="numeric" placeholder="go to page" value={jump} onChange={e => setJump(e.target.value.replace(/[^0-9]/g, '').slice(0, 12))} onKeyDown={e => { if (e.key === 'Enter' && jump) { setPage(Math.max(0, Math.min(pages - 1, Number(jump) - 1))); setJump('') } }} />
         <button className="lv-btn" onClick={() => setPage(front)}>latest</button>
