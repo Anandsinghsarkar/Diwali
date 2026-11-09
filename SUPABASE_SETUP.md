@@ -34,3 +34,8 @@ Room codes, room limits (2 for Couple and 12 for Friends), persistent anonymous 
 ## Couple partner diya controls
 
 Run `supabase/partner_diya.sql` in the SQL Editor (also included at the end of `supabase/schema.sql`). In a Couple room, either partner can select the other person's board, light additional diyas, set a total, or blow out lit diyas. This permission is limited to the two members of that Couple room; Friends rooms keep their existing behavior.
+
+
+## Individual diya controls and rainbow flames
+
+Run `supabase/individual_diya.sql` once in Supabase SQL Editor after the existing schema and partner diya migration. This adds independent per-diya lighting/extinguishing (one tap affects only the selected diya) and persistent Natural, Rainbow, Blue, Pink, Green, and Violet flame styles. The migration is also appended to `supabase/schema.sql` for fresh installs.
