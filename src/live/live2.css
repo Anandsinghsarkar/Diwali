@@ -58,3 +58,9 @@
 .lv .lv-diya-scroll .lv-diya{touch-action:pan-y}
 .lv .lv-rainbow-swatch{background:conic-gradient(red,orange,yellow,lime,cyan,blue,magenta,red)!important;color:white!important;font-size:20px}
 .lv .lv-sw .lv-rainbow-swatch{border:2px solid rgba(255,255,255,.5)}
+
+/* Crackers control visibility toggle beside the Night Sky heading. */
+.lv .lv-fw-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.lv .lv-fw-title-row h2{margin:4px 0}
+.lv .lv-fw-toggle{flex:0 0 auto;border:1px solid rgba(232,185,92,.55);border-radius:999px;padding:9px 15px;background:rgba(8,10,25,.88);color:var(--ink);font-size:12px;font-weight:650;white-space:nowrap;backdrop-filter:blur(8px)}
+.lv .lv-fw-toggle:active{transform:scale(.96)}
