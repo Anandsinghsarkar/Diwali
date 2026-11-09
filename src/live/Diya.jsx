@@ -4,6 +4,7 @@ import { PER_PAGE, drawDiya, fit, flick, floorPattern, fmt, rnd, isOn, extentOf 
 export default function DiyaBoard({ users, players, me, online, live, couple = false, act, race, scores, offset }) {
   const cv = useRef(null)
   const scrollRef = useRef(null)
+  const pointerStart = useRef(null)
   const lay = useRef({ cols: 7, cw: 100, ch: 100, sc: 1, x0: 0, y0: 0 })
   const st = useRef({ lit: 0, pg: 0, view: me })
   const cool = useRef(false)
@@ -148,7 +149,14 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
       setPage(old => old === next ? old : next)
     }}>
       <div className="lv-diya-track" style={{ height: `${pages * 100}%`, "--pages": pages }}>
-        <canvas ref={cv} className="lv-diya" onPointerDown={hit} />
+        <canvas ref={cv} className="lv-diya"
+          onPointerDown={e => { pointerStart.current = { x: e.clientX, y: e.clientY } }}
+          onPointerUp={e => {
+            const p = pointerStart.current
+            pointerStart.current = null
+            if (p && Math.hypot(e.clientX - p.x, e.clientY - p.y) < 10) hit(e)
+          }}
+          onPointerCancel={() => { pointerStart.current = null }} />
       </div>
     </div>
     <div className="lv-cap"><span className="lv-eye">{mine ? 'TAP EACH DIYA TO LIGHT OR EXTINGUISH IT' : couple ? 'TAP A PARTNER DIYA TO TOGGLE ITS FLAME' : 'TAP ONE LIT DIYA TO EXTINGUISH ONLY THAT ONE'}</span><h2>Diya <em>World</em></h2><p>{fmt(lit)} lit · {mine ? 'your board' : viewName + "'s board"}</p></div>
