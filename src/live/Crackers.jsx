@@ -4,7 +4,7 @@ import { TAU, mulberry32, pick, rnd } from './common.js'
 const SHELLS = ['peony', 'chrys', 'willow', 'ring', 'heart', 'crackle', 'palm']
 const GROUND = ['anar', 'chakri', 'ladi', 'bomb', 'sparkler']
 const LABEL = { random: 'Random', peony: 'Peony', chrys: 'Chrysanthemum', willow: 'Willow', ring: 'Ring', heart: 'Heart', crackle: 'Crackle', palm: 'Palm', anar: 'Anar', chakri: 'Chakri', ladi: 'Ladi', bomb: 'Atom bomb', sparkler: 'Phuljhadi' }
-const HUES = [['Random', -1], ['Multi', -2], ['Gold', 42], ['Red', 2], ['Green', 130], ['Blue', 212], ['Pink', 325]]
+const HUES = [['Random', -1], ['Multi', -2], ['Rainbow', -3], ['Gold', 42], ['Red', 2], ['Green', 130], ['Blue', 212], ['Pink', 325], ['Violet', 275], ['Cyan', 185], ['Orange', 28]]
 
 export default function Crackers({ send, sub, couple }) {
   const cv = useRef(null), skyRef = useRef(null), api = useRef({})
@@ -62,7 +62,7 @@ export default function Crackers({ send, sub, couple }) {
 
     const burst = (x, y, kind, hue) => {
       const base = hue >= 0 ? hue : rnd(0, 360), alt = (base + rnd(70, 180)) % 360
-      const col = () => hue === -2 ? pick([base, alt, 42, 0]) : base + rnd(-10, 10)
+      const col = () => hue === -2 ? pick([base, alt, 42, 0]) : hue === -3 ? rnd(0, 360) : base + rnd(-10, 10)
       const sph = () => { const th = rnd(0, TAU), ph = Math.acos(rnd(-1, 1)); return [Math.sin(ph) * Math.cos(th), Math.sin(ph) * Math.sin(th)] }
       let sp = rnd(3.4, 4.4) * f
       if (kind === 'peony') {
