@@ -254,8 +254,9 @@ declare
   lit_count bigint;
   m text;
   result jsonb;
+  action_to_apply text;
 begin
-  if p_action not in ('light','blow','flame') then
+  if p_action not in ('light','blow','toggle','flame') then
     raise exception 'Invalid diya action.';
   end if;
   if not exists(select 1 from public.room_members where room_code=p_room_code and user_id=auth.uid()) then
@@ -264,7 +265,7 @@ begin
   if not exists(select 1 from public.room_members where room_code=p_room_code and user_id=p_target_id) then
     raise exception 'That player is not in this room.';
   end if;
-  if p_target_id <> auth.uid() and p_action <> 'blow' then
+  if p_target_id <> auth.uid() and p_action not in ('blow') then
     select mode into m from public.rooms where room_code=p_room_code;
     if m <> 'couple' then
       raise exception 'Only Couple room partners can change each other’s diya board.';
@@ -291,7 +292,18 @@ begin
     holes := coalesce(v->'holes','{}'::jsonb);
     extras := coalesce(v->'extras','{}'::jsonb);
 
-    if p_action='light' then
+    -- Decide toggle from the locked, latest database state, not a possibly
+    -- stale browser snapshot. This makes rapid taps reliably reversible.
+    action_to_apply := p_action;
+    if p_action='toggle' then
+      if (idx < p and not (holes ? k)) or (idx >= p and extras ? k) then
+        action_to_apply := 'blow';
+      else
+        action_to_apply := 'light';
+      end if;
+    end if;
+
+    if action_to_apply='light' then
       if idx < p then
         holes := holes - k;
       elsif idx = p then
