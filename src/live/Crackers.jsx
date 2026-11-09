@@ -72,17 +72,17 @@ export default function Crackers({ send, sub, couple }) {
         for (let i = 0; i < 95; i++) { const [a, b] = sph(); addP(x, y, a * sp, b * sp, { h: col(), decay: rnd(.007, .01), drag: .975, tw: true, size: 1.9 }) }
       } else if (kind === 'willow') {
         sp = rnd(2.6, 3.2) * f
-        for (let i = 0; i < 100; i++) { const [a, b] = sph(); addP(x, y, a * sp, b * sp, { h: hue >= 0 ? hue : 40, s: 90, decay: rnd(.0035, .005), drag: .978, g: .05, size: 1.8, tw: true }) }
+        for (let i = 0; i < 100; i++) { const [a, b] = sph(); addP(x, y, a * sp, b * sp, { h: hue === -3 ? rnd(0, 360) : hue >= 0 ? hue : 40, s: 90, decay: rnd(.0035, .005), drag: .978, g: .05, size: 1.8, tw: true }) }
       } else if (kind === 'ring') {
         const tilt = rnd(0, 3.14), k = rnd(.3, .9), ct = Math.cos(tilt), st = Math.sin(tilt)
         for (let i = 0; i < 72; i++) { const a = i / 72 * TAU, ex = Math.cos(a) * sp, ey = Math.sin(a) * sp * k; addP(x, y, ex * ct - ey * st, ex * st + ey * ct, { h: col(), decay: .013, size: 2 }) }
       } else if (kind === 'heart') {
-        const h0 = hue >= 0 ? hue : 340
+        const h0 = hue === -3 ? rnd(0, 360) : hue >= 0 ? hue : 340
         for (let i = 0; i < 100; i++) { const t = i / 100 * TAU, hx = 16 * Math.pow(Math.sin(t), 3), hy = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)); addP(x, y, hx / 16 * sp * .95, hy / 16 * sp * .95, { h: h0 + rnd(-8, 8), decay: .012, size: 2.1, drag: .965 }) }
       } else if (kind === 'crackle') {
-        for (let i = 0; i < 110; i++) { const [a, b] = sph(); addP(x, y, a * sp, b * sp, { h: hue >= 0 ? hue : 45, s: 80, decay: rnd(.012, .018), crackle: true, size: 1.8 }) }
+        for (let i = 0; i < 110; i++) { const [a, b] = sph(); addP(x, y, a * sp, b * sp, { h: hue === -3 ? rnd(0, 360) : hue >= 0 ? hue : 45, s: 80, decay: rnd(.012, .018), crackle: true, size: 1.8 }) }
       } else {
-        for (let arm = 0; arm < 14; arm++) { const a = arm / 14 * TAU + rnd(-.05, .05); for (let j = 0; j < 7; j++) { const s2 = sp * (.55 + j * .09); addP(x, y, Math.cos(a) * s2, Math.sin(a) * s2, { h: hue >= 0 ? hue : 40, s: 85, decay: .009 + j * .0008, g: .06, size: 2 }) } }
+        for (let arm = 0; arm < 14; arm++) { const a = arm / 14 * TAU + rnd(-.05, .05); for (let j = 0; j < 7; j++) { const s2 = sp * (.55 + j * .09); addP(x, y, Math.cos(a) * s2, Math.sin(a) * s2, { h: hue === -3 ? rnd(0, 360) : hue >= 0 ? hue : 40, s: 85, decay: .009 + j * .0008, g: .06, size: 2 }) } }
       }
       flashes.push({ x, y, life: 1, h: base, R: 260 })
       const dly = .25 + (1 - y / H) * .35
