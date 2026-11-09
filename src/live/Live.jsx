@@ -25,12 +25,18 @@ const blip = () => {
 const EMOJI = ['🪔', '🎆', '❤️', '😂', '🔥', '💨', '✨', '🙏']
 
 function Side({ users, me, online, typing, msgs, live, send, couple, room, open, onClose, onQuit, onType }) {
-  const [d, setD] = useState(''), end = useRef(null)
+  const [d, setD] = useState(''), [chatError, setChatError] = useState(''), [sending, setSending] = useState(false), end = useRef(null)
   useEffect(() => { end.current?.scrollIntoView({ block: 'end' }) }, [msgs, open])
-  const go = (text, kind) => {
-    const t = (text ?? d).trim(); if (!t || !live) return
-    send({ t: 'chat', text: t, kind }); send({ t: 'typing', v: false })
-    if (text == null) setD('')
+  const go = async (text, kind) => {
+    const t = (text ?? d).trim(); if (!t || !live || sending) return
+    setChatError(''); setSending(true)
+    try {
+      await send({ t: 'chat', text: t, kind })
+      send({ t: 'typing', v: false })
+      if (text == null) setD('')
+    } catch (e) {
+      setChatError(e?.message || 'Message send nahi hua. Connection check karke dobara try karo.')
+    } finally { setSending(false) }
   }
   const who = users.filter(u => u.id !== me && typing[u.id]).map(u => u.name)
   const quick = couple ? ['💗 thinking of you', '🪔 light yours too', '✨ look at the sky'] : ['🪔 Shubh Deepawali!', '✨ look at the sky', '🎆 more crackers!']
@@ -42,7 +48,7 @@ function Side({ users, me, online, typing, msgs, live, send, couple, room, open,
       : <div key={m.id} className={'lv-msg' + (m.from === me ? ' me' : '') + (m.kind === 'love' ? ' love' : '')}><small>{m.from === me ? 'You' : m.name} · {timeOf(m.at)}</small><p>{m.text}</p></div>)}<div ref={end} /></div>
     <div className="lv-typing">{who.length ? `${who.join(', ')} ${who.length > 1 ? 'are' : 'is'} typing…` : ''}</div>
     <div className="lv-quick">{[...EMOJI.map(e => [e, 'msg']), ...quick.map(q => [q, couple ? 'love' : 'msg'])].map(([q, k]) => <button key={q} disabled={!live} onClick={() => go(q, k)}>{q}</button>)}</div>
-    <form className="lv-compose" onSubmit={e => { e.preventDefault(); go() }}><input value={d} maxLength={400} onChange={e => { setD(e.target.value); onType() }} placeholder={live ? 'say something…' : 'join a room to chat'} disabled={!live} /><button disabled={!live || !d.trim()}>Send</button></form>
+    <form className="lv-compose" onSubmit={e => { e.preventDefault(); go() }}><input value={d} maxLength={400} onChange={e => { setD(e.target.value); onType() }} placeholder={live ? 'say something…' : 'join a room to chat'} disabled={!live} /><button disabled={!live || !d.trim() || sending}>{sending ? "Sending…" : "Send"}</button></form>\n    {chatError && <div className="lv-chat-error" role="alert">{chatError}</div>}
     <p className="lv-note">Your chat view starts when you open the page. Refresh and it clears.</p>
     {live && <button className="lv-link lv-quit" onClick={onQuit}>disconnect from this room for good</button>}
   </aside>
