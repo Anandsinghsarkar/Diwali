@@ -113,7 +113,7 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
     const on = isOn(board, idx)
     if (!mine && !couple) { if (on) puff(idx); return }
     if (!mine && !live) return
-    act.diya(view, idx, on ? 'blow' : 'light')
+    act.diya(view, idx, 'toggle')
   }
   const hit = e => {
     const b = cv.current.getBoundingClientRect(), x = e.clientX - b.left, y = e.clientY - b.top, L = lay.current
