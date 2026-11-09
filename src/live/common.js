@@ -16,6 +16,65 @@ export const genCode = mode => {
 export const fmt = n => Number(n || 0).toLocaleString('en-IN')
 export const clampLit = n => Math.max(0, Math.min(MAX_LIT, Math.floor(Number(n) || 0)))
 
+/* ───────── per-diya state ─────────
+   A player's board is { p, holes, extras, lit, flame }:
+   - every index below p is lit, except the ones listed in holes
+   - indices at/after p are unlit, except the ones listed in extras
+   - lit is the running count (kept in sync by applyOp, so scores stay atomic)
+   Lighting or blowing ONE diya only touches that one diya. */
+const norm = cur => ({ p: cur && cur.p != null ? cur.p : (cur && cur.lit) || 0, holes: { ...(cur && cur.holes) }, extras: { ...(cur && cur.extras) }, flame: cur && cur.flame })
+const fin = s => {
+  const hk = Object.keys(s.holes).length, ek = Object.keys(s.extras).length
+  const o = { p: s.p, lit: Math.max(0, s.p - hk + ek) }
+  if (hk) o.holes = s.holes
+  if (ek) o.extras = s.extras
+  if (s.flame) o.flame = s.flame
+  return o
+}
+export const pOf = s => (s ? (s.p != null ? s.p : s.lit || 0) : 0)
+export const isOn = (s, i) => (!s ? false : i < pOf(s) ? !(s.holes && s.holes[i]) : !!(s.extras && s.extras[i]))
+export const extentOf = s => { if (!s) return 0; let e = pOf(s); if (s.extras) for (const k in s.extras) if (+k + 1 > e) e = +k + 1; return e }
+
+const lightOne = (s, i) => {
+  if (i < s.p) delete s.holes[i]
+  else if (i === s.p) { s.p++; while (s.extras[s.p]) { delete s.extras[s.p]; s.p++ } }
+  else s.extras[i] = true
+}
+const blowOne = (s, i) => {
+  if (i < s.p) { s.holes[i] = true; while (s.p > 0 && s.holes[s.p - 1]) { delete s.holes[s.p - 1]; s.p-- } }
+  else delete s.extras[i]
+}
+
+export function applyOp(cur, op) {
+  const s = norm(cur)
+  switch (op.k) {
+    case 'light': lightOne(s, op.i); break
+    case 'blow': blowOne(s, op.i); break
+    case 'range': for (let i = op.a; i < op.b; i++) lightOne(s, i); break
+    case 'add': {
+      let n = Math.max(0, Math.floor(op.n || 0))
+      const hs = Object.keys(s.holes).map(Number).sort((a, b) => a - b)
+      for (const h of hs) { if (n <= 0) break; delete s.holes[h]; n-- }
+      s.p = Math.min(MAX_LIT, s.p + n)
+      for (const k of Object.keys(s.extras)) if (+k < s.p) delete s.extras[k]
+      while (s.extras[s.p]) { delete s.extras[s.p]; s.p++ }
+      break
+    }
+    case 'set': return fin({ p: Math.min(MAX_LIT, Math.max(0, Math.floor(op.n || 0))), holes: {}, extras: {}, flame: s.flame })
+    case 'clear': return fin({ p: 0, holes: {}, extras: {}, flame: s.flame })
+    case 'blowLast': {
+      let r = Math.min(1000, Math.max(0, Math.floor(op.n || 0)))
+      const ex = Object.keys(s.extras).map(Number).sort((a, b) => b - a)
+      for (const e of ex) { if (r <= 0) break; delete s.extras[e]; r-- }
+      while (r > 0 && s.p > 0) { if (s.holes[s.p - 1]) { delete s.holes[s.p - 1]; s.p-- } else { s.p--; r-- } }
+      break
+    }
+    case 'flame': s.flame = op.f === 'natural' ? undefined : op.f; break
+    default: break
+  }
+  return fin(s)
+}
+
 export function fit(c, ctx) {
   const dpr = Math.min(window.devicePixelRatio || 1, 2), W = c.clientWidth, H = c.clientHeight
   const bw = Math.round(W * dpr), bh = Math.round(H * dpr)
@@ -26,6 +85,26 @@ export function fit(c, ctx) {
 
 export const flick = (t, i) => .94 + Math.sin(t * .009 + i * 2.3) * .04 + Math.sin(t * .031 + i) * .025
 
+/* ───────── flame colours (natural, rainbow, blue, pink, green, violet) ───────── */
+export const fhue = (fh, t, i) => (fh === 'rainbow' ? (t * .06 + i * 47) % 360 : ({ blue: 210, pink: 325, green: 135, violet: 275 }[fh] ?? null))
+export const glow = (fh, t, i, a) => { const h = fhue(fh, t, i); return h == null ? `rgba(255,140,50,${a})` : `hsla(${h},100%,58%,${a})` }
+export const glow0 = (fh, t, i) => { const h = fhue(fh, t, i); return h == null ? 'rgba(255,90,20,0)' : `hsla(${h},100%,50%,0)` }
+
+/* ───────── small sounds ───────── */
+let _ac
+const audio = () => { try { _ac = _ac || new (window.AudioContext || window.webkitAudioContext)(); if (_ac.state === 'suspended') _ac.resume(); return _ac } catch { return null } }
+const noiseBurst = (dur, type, f, q, gain, delay = 0) => {
+  const a = audio(); if (!a) return
+  const n = Math.max(1, (a.sampleRate * dur) | 0), b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0)
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2)
+  const s = a.createBufferSource(); s.buffer = b
+  const fl = a.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q
+  const g = a.createGain(); g.gain.value = gain
+  s.connect(fl); fl.connect(g); g.connect(a.destination); s.start(a.currentTime + delay)
+}
+export const puffSound = () => noiseBurst(.35, 'bandpass', 900, .6, .18)
+export const lightSound = () => { noiseBurst(.08, 'highpass', 4000, .7, .12); noiseBurst(.3, 'lowpass', 600, .7, .08, .06) }
+
 export function floorPattern() {
   const p = document.createElement('canvas'); p.width = p.height = 160
   const x = p.getContext('2d'), r = mulberry32(11)
@@ -34,7 +113,7 @@ export function floorPattern() {
   return p
 }
 
-export function drawDiya(ctx, x, y, sc, lit, t, i) {
+export function drawDiya(ctx, x, y, sc, lit, t, i, fh) {
   const fl = flick(t, i)
   ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc)
   ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.ellipse(4, 48, 74, 13, 0, 0, TAU); ctx.fill()
@@ -50,10 +129,11 @@ export function drawDiya(ctx, x, y, sc, lit, t, i) {
   ctx.fillStyle = 'rgba(255,210,170,.14)'; ctx.beginPath(); ctx.ellipse(-30, 22, 14, 7, -.5, 0, TAU); ctx.fill()
   ctx.fillStyle = '#1b0e08'; ctx.fillRect(-2.5, -14, 5, 15)
   if (lit) {
+    const H = fhue(fh, t, i), nat = H == null
     ctx.globalCompositeOperation = 'lighter'
-    let r = ctx.createRadialGradient(0, -2, 2, 0, -2, 54); r.addColorStop(0, `rgba(255,170,70,${.7 * fl})`); r.addColorStop(1, 'rgba(255,100,20,0)')
+    let r = ctx.createRadialGradient(0, -2, 2, 0, -2, 54); r.addColorStop(0, nat ? `rgba(255,170,70,${.7 * fl})` : `hsla(${H},100%,60%,${.7 * fl})`); r.addColorStop(1, nat ? 'rgba(255,100,20,0)' : `hsla(${H},100%,50%,0)`)
     ctx.fillStyle = r; ctx.beginPath(); ctx.ellipse(0, 1, 56, 14, 0, 0, TAU); ctx.fill()
-    r = ctx.createRadialGradient(0, 0, 10, 0, 0, 110); r.addColorStop(0, `rgba(255,140,50,${.35 * fl})`); r.addColorStop(1, 'rgba(255,100,20,0)')
+    r = ctx.createRadialGradient(0, 0, 10, 0, 0, 110); r.addColorStop(0, nat ? `rgba(255,140,50,${.35 * fl})` : `hsla(${H},100%,55%,${.35 * fl})`); r.addColorStop(1, nat ? 'rgba(255,100,20,0)' : `hsla(${H},100%,50%,0)`)
     ctx.fillStyle = r; ctx.fillRect(-120, -80, 240, 160)
     const h = 62 * fl, w = 15, sway = Math.sin(t * .0042 + i * 1.7) * 3.4 + Math.sin(t * .0113 + i) * 1.9
     const drop = (s, c0, c1) => {
@@ -61,9 +141,10 @@ export function drawDiya(ctx, x, y, sc, lit, t, i) {
       const gr = ctx.createLinearGradient(0, 0, 0, -h); gr.addColorStop(0, c0); gr.addColorStop(1, c1); ctx.fillStyle = gr
       ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(-w * 1.15, -h * .22, -w * .7, -h * .62, sway, -h); ctx.bezierCurveTo(w * .7, -h * .62, w * 1.15, -h * .22, 0, 0); ctx.fill(); ctx.restore()
     }
-    drop(1, 'rgba(255,100,10,.9)', 'rgba(255,170,40,.1)'); drop(.74, 'rgba(255,185,50,1)', 'rgba(255,235,140,.25)'); drop(.42, 'rgba(255,248,215,1)', 'rgba(255,255,255,.2)')
-    ctx.fillStyle = 'rgba(80,120,255,.5)'; ctx.beginPath(); ctx.ellipse(0, -17, 4.5, 7, 0, 0, TAU); ctx.fill()
-    r = ctx.createRadialGradient(0, -45, 4, 0, -45, 150); r.addColorStop(0, `rgba(255,170,70,${.4 * fl})`); r.addColorStop(1, 'rgba(255,100,20,0)')
+    if (nat) { drop(1, 'rgba(255,100,10,.9)', 'rgba(255,170,40,.1)'); drop(.74, 'rgba(255,185,50,1)', 'rgba(255,235,140,.25)'); drop(.42, 'rgba(255,248,215,1)', 'rgba(255,255,255,.2)') }
+    else { drop(1, `hsla(${H},100%,50%,.9)`, `hsla(${H + 15},100%,60%,.1)`); drop(.74, `hsla(${H + 10},100%,62%,1)`, `hsla(${H + 20},100%,80%,.25)`); drop(.42, `hsla(${H + 25},100%,94%,1)`, `hsla(${H + 25},100%,96%,.2)`) }
+    ctx.fillStyle = nat ? 'rgba(80,120,255,.5)' : `hsla(${H + 200},100%,65%,.5)`; ctx.beginPath(); ctx.ellipse(0, -17, 4.5, 7, 0, 0, TAU); ctx.fill()
+    r = ctx.createRadialGradient(0, -45, 4, 0, -45, 150); r.addColorStop(0, nat ? `rgba(255,170,70,${.4 * fl})` : `hsla(${H},100%,60%,${.4 * fl})`); r.addColorStop(1, nat ? 'rgba(255,100,20,0)' : `hsla(${H},100%,50%,0)`)
     ctx.fillStyle = r; ctx.fillRect(-160, -200, 320, 320)
     ctx.globalCompositeOperation = 'source-over'
   }
