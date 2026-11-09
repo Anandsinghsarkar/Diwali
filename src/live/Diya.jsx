@@ -17,6 +17,7 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
   const [jump, setJump] = useState('')
   const [now, setNow] = useState(Date.now())
   const [seen, setSeen] = useState(0)
+  const [controlsVisible, setControlsVisible] = useState(true)
 
   useEffect(() => { setView(v => users.some(u => u.id === v) ? v : me) }, [users, me])
   const board = players[view] || { lit: 0 }
@@ -142,7 +143,7 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
   const rr = ranked.map(u => ({ id: u.id, name: u.name, n: u.sc })).sort((a, b) => b.n - a.n)
   const tie = rr.length > 1 && rr[0].n === rr[1].n
 
-  return <div className="lv-pane">
+  return <div className={"lv-pane lv-diya-pane" + (controlsVisible ? "" : " lv-controls-hidden")}>
     <div ref={scrollRef} className="lv-diya-scroll" onScroll={e => {
       const h = e.currentTarget.clientHeight || 1
       const next = Math.max(0, Math.min(pages - 1, Math.floor((e.currentTarget.scrollTop + h * .35) / h)))
@@ -161,6 +162,7 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
     </div>
     <div className="lv-cap"><span className="lv-eye">{mine ? 'TAP EACH DIYA TO LIGHT OR EXTINGUISH IT' : couple ? 'TAP A PARTNER DIYA TO TOGGLE ITS FLAME' : 'TAP ONE LIT DIYA TO EXTINGUISH ONLY THAT ONE'}</span><h2>Diya <em>World</em></h2><p>{fmt(lit)} lit · {mine ? 'your board' : viewName + "'s board"}</p></div>
 
+    <button className="lv-controls-toggle" onClick={() => setControlsVisible(v => !v)} aria-expanded={controlsVisible}>{controlsVisible ? "Hide controls" : "Show controls"}</button>
     <div className="lv-score">
       <div className="lv-score-head"><b>Scoreboard</b>{msg && <span>{msg}</span>}</div>
       {ranked.map((u, i) => <div key={u.id} className={'lv-srow' + (u.id === view ? ' on' : '')} onClick={() => setView(u.id)}>
