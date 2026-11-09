@@ -327,7 +327,7 @@ begin
       end if;
     end if;
 
-    lit_count := greatest(0,p - jsonb_object_length(holes) + jsonb_object_length(extras));
+    lit_count := greatest(0,p - (select count(*)::bigint from jsonb_object_keys(holes)) + (select count(*)::bigint from jsonb_object_keys(extras)));
     result := v || jsonb_build_object('p',p,'lit',lit_count,'holes',holes,'extras',extras);
   end if;
 
