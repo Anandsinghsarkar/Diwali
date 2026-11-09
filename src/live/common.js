@@ -1,6 +1,6 @@
 export const TAU = Math.PI * 2
 export const PER_PAGE = 14
-export const PALETTE = ['#ff9d0a', '#e8321e', '#d81b78', '#f4efe4', '#2aa84a', '#2f6fe0', '#ffd21f', '#7a3fc0']
+export const PALETTE = ['#ff9d0a', '#e8321e', '#d81b78', '#f4efe4', '#2aa84a', '#2f6fe0', '#ffd21f', '#7a3fc0', '#00c2a8', '#ff6b35', '#a8e10c', '#ff4fa3', '#8c7bff', '#38d5ff', '#b7ff5a', '#ffb7d5']
 export const FLOOR = '#1a141c'
 export const MAX_LIT = 1e12
 
