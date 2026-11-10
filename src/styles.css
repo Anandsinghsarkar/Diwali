@@ -251,3 +251,9 @@ body{min-height:100%;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrollin
 @keyframes holi-spray{0%{opacity:.95;transform:translate(-50%,-50%) rotate(-18deg) scaleX(.1)}45%{opacity:.85;transform:translate(-50%,-50%) rotate(-18deg) scaleX(1)}100%{opacity:0;transform:translate(-50%,-50%) rotate(-18deg) scaleX(1.2)}}
 .holi-special-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}.holi-special-grid article{padding:18px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.035)}.holi-special-grid article>span{font-size:28px}.holi-special-grid b{display:block;margin:8px 0}.holi-special-grid p{margin:0;color:var(--muted,#aaa);font-size:13px;line-height:1.55}
 @media(max-width:650px){.holi-special-grid{grid-template-columns:1fr}.holi-modes{margin-left:0;width:100%}.holi-toolbar{align-items:flex-start}.holi-colors{width:100%}.holi-arena{min-height:380px}}
+
+.holi-room-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0;padding:14px;border:1px solid rgba(255,255,255,.14);border-radius:16px;background:linear-gradient(110deg,rgba(255,76,140,.1),rgba(66,177,255,.1))}
+.holi-room-bar>div{display:grid;gap:4px;flex:1 1 180px}.holi-room-bar small{color:var(--muted,#aaa);font-size:12px}
+.holi-room-bar button{border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:10px 15px;background:linear-gradient(110deg,#ff4f8b,#ffb33d);color:#241020;font-weight:700}
+.holi-room-bar input{min-width:130px;max-width:180px;border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:10px 14px;background:rgba(0,0,0,.22);color:inherit;text-transform:uppercase}
+.holi-room-error{margin:8px 0;padding:10px;border-radius:10px;background:rgba(180,35,55,.2);color:#ffb9c2;font-size:13px}
