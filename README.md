@@ -48,6 +48,10 @@ The website is optimized for Android mobile browsers:
 
 Only use the Supabase publishable/anon key in the browser. Never expose a `service_role` key or secret key in frontend code.
 
+## Fingerprint / Passkey login
+
+See [PASSKEY_SETUP.md](./PASSKEY_SETUP.md) to enable real WebAuthn passkeys in Supabase Authentication. Passkeys use the device/browser's secure verification prompt; the website does not access biometric data.
+
 ## Run locally
 
 ```bash
