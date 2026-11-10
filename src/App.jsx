@@ -26,7 +26,12 @@ function HoliCelebration(){
   const [roomStatus,setRoomStatus]=useState('solo')
   const [people,setPeople]=useState(1)
   const [roomError,setRoomError]=useState('')
+  const [avatar,setAvatar]=useState('🦊')
+  const [xPos,setXPos]=useState(50)
+  const [players,setPlayers]=useState([])
+  const [hit,setHit]=useState(false)
   const channelRef=useRef(null)
+  const playerId=useRef('p'+Math.random().toString(36).slice(2,10))
   const colors=['#ff3b75','#ff9d21','#ffe12e','#35c978','#20b9ff','#9257ff','#ff62d5','#ffffff']
   const addBurst=(data)=>{
     const id=Date.now()+Math.random()
@@ -42,11 +47,19 @@ function HoliCelebration(){
     if(channelRef.current)await supabase.removeChannel(channelRef.current)
     const channel=supabase.channel('holi-live-'+roomCode,{config:{broadcast:{self:false},presence:{key:crypto.randomUUID?.()||String(Math.random())}}})
     channel.on('broadcast',{event:'colour'},({payload})=>addBurst({...payload,remote:true}))
-    channel.on('presence',{event:'sync'},()=>setPeople(Object.keys(channel.presenceState()).length||1))
+    channel.on('broadcast',{event:'avatar'},({payload})=>{
+      if(payload?.action==='move')setPlayers(list=>list.map(p=>p.id===payload.id?{...p,x:payload.x,avatar:payload.avatar}:p))
+      if(payload?.action==='hit'&&payload.target===playerId.current){setHit(true);setTimeout(()=>setHit(false),650);addBurst({x:50,y:55,color:payload.color||'#ff3b75',mode:'gulal'})}
+    })
+    channel.on('presence',{event:'sync'},()=>{
+      const state=channel.presenceState()
+      const nextPlayers=Object.entries(state).flatMap(([key,items])=>(items||[]).map(v=>({id:key,avatar:v.avatar||'🦊',x:v.x??50})))
+      setPlayers(nextPlayers);setPeople(nextPlayers.length||1)
+    })
     channel.subscribe(async status=>{
       if(status==='SUBSCRIBED'){
         channelRef.current=channel
-        await channel.track({joined_at:new Date().toISOString()})
+        await channel.track({avatar,x:xPos,joined_at:new Date().toISOString()})
         setRoom(roomCode);setCode(roomCode);setRoomStatus('live')
       }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){
         setRoomError('Room connect nahi hua. Dobara try karo.')
@@ -55,6 +68,8 @@ function HoliCelebration(){
     })
   }
   const createRoom=()=>{const c=Math.random().toString(36).slice(2,8).toUpperCase();setEntry(c);connect(c)}
+  const moveAvatar=async(delta)=>{const nx=Math.max(5,Math.min(95,xPos+delta));setXPos(nx);const ch=channelRef.current;if(ch){await ch.track({avatar,x:nx,joined_at:new Date().toISOString()});ch.send({type:'broadcast',event:'avatar',payload:{action:'move',id:playerId.current,x:nx,avatar}})}}
+  const splashOpponent=()=>{const others=players.filter(p=>p.id!==playerId.current);if(!others.length){setRoomError('Battle ke liye kam se kam ek friend room mein join kare.');return}const target=others[Math.floor(Math.random()*others.length)];channelRef.current?.send({type:'broadcast',event:'avatar',payload:{action:'hit',target:target.id,color}});addBurst({x:Math.max(8,Math.min(92,target.x)),y:55,color,mode:'pichkari'})}
   const throwColor=e=>{
     const r=e.currentTarget.getBoundingClientRect()
     const payload={x:Math.max(4,Math.min(96,(e.clientX-r.left)/r.width*100)),y:Math.max(8,Math.min(92,(e.clientY-r.top)/r.height*100)),color,mode}
@@ -71,6 +86,7 @@ function HoliCelebration(){
       </>}
     </div>
     {roomError&&<div className="holi-room-error" role="alert">{roomError}</div>}
+    {roomStatus==='live'&&<div className="holi-battle"><div className="holi-battle-head"><b>🥽 Avatar Color Battle</b><small>Choose an avatar, move and splash a friend!</small></div><div className="holi-avatar-choices">{['🦊','🐼','🐸','🐯','🐻','🐵','🐱','🐰'].map(v=><button key={v} className={avatar===v?'selected':''} onClick={async()=>{setAvatar(v);await channelRef.current?.track({avatar:v,x:xPos,joined_at:new Date().toISOString()});channelRef.current?.send({type:'broadcast',event:'avatar',payload:{action:'move',id:playerId.current,x:xPos,avatar:v}})}}>{v}</button>)}</div><div className="holi-battle-stage">{players.map(p=><span key={p.id} className={'holi-player '+(p.id===playerId.current?'mine':'')+(hit&&p.id===playerId.current?' hit':'')} style={{left:p.x+'%'}}>{p.avatar}<i>{p.id===playerId.current?'You':'Friend'}</i></span>)}</div><div className="holi-battle-actions"><button onClick={()=>moveAvatar(-8)}>← Move</button><button onClick={()=>moveAvatar(8)}>Move →</button><button className="splash" onClick={splashOpponent}>💦 Splash friend!</button></div></div>}
     <div className="holi-toolbar"><b>Choose your colour</b><div className="holi-colors">{colors.map(c=><button key={c} aria-label={c} className={color===c?'active':''} style={{'--holi-color':c}} onClick={()=>setColor(c)}/>)}</div><div className="holi-modes"><button className={mode==='gulal'?'active':''} onClick={()=>setMode('gulal')}>🌈 Gulal</button><button className={mode==='pichkari'?'active':''} onClick={()=>setMode('pichkari')}>💦 Pichkari</button><button onClick={()=>setBursts([])}>Clear colours</button></div></div>
     <div className="holi-arena" onPointerUp={throwColor} role="button" tabIndex={0} aria-label="Tap or touch to throw virtual Holi colours">
       <div className="holi-arena-title">TAP ANYWHERE TO PLAY <span>✦</span></div>
