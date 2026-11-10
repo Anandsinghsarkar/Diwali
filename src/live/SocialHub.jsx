@@ -1,5 +1,6 @@
 import React,{useCallback,useEffect,useState} from 'react'
 import {supabaseReady,supabase} from './supabase.js'
+import PasskeySecurity from './PasskeySecurity.jsx'
 import './social.css'
 
 const msg=e=>e?.message||'Something went wrong.'
@@ -35,6 +36,20 @@ export default function SocialHub(){
  }catch(e){setError(msg(e))}finally{setBusy('')}
  }
  const act=async(key,fn)=>{setBusy(key);setError('');setNotice('');try{await fn();await load()}catch(e){setError(msg(e))}finally{setBusy('')}}
+ const passkeyLogin=async()=>{
+  setBusy('passkey');setError('');setNotice('')
+  try{
+   if(!window.isSecureContext||!window.PublicKeyCredential)throw new Error('Passkey login requires a supported browser and HTTPS.')
+   const {data,error}=await supabase.auth.signInWithPasskey()
+   if(error)throw error
+   if(data?.user){
+    const {error:profileError}=await supabase.from('profiles').upsert({id:data.user.id,display_name:data.user.user_metadata?.display_name||data.user.email?.split('@')[0]||'Friend'},{onConflict:'id'})
+    if(profileError)throw profileError
+   }
+   setNotice('Secure passkey sign-in successful.')
+  }catch(e){setError(msg(e))}
+  finally{setBusy('')}
+ }
  const sendRequest=id=>act(id,async()=>{const {error}=await supabase.from('connection_requests').insert({sender_id:uid,receiver_id:id,status:'pending'});if(error)throw error;setNotice('Connection request sent.')})
  const accept=id=>act(id,async()=>{const {data,error}=await supabase.rpc('diwali_accept_connection',{p_request_id:id});if(error)throw error;setNotice('Connected! Ab dono users room join kar sakte hain.')})
  const reject=id=>act(id,async()=>{const {error}=await supabase.from('connection_requests').update({status:'rejected'}).eq('id',id).eq('receiver_id',uid);if(error)throw error})
@@ -57,6 +72,7 @@ export default function SocialHub(){
   <label>Password<input required type="password" minLength="6" value={password} onChange={e=>setPassword(e.target.value)} placeholder="At least 6 characters"/></label>
   {error&&<div className="social-error">{error}</div>}{notice&&<div className="social-notice">{notice}</div>}
   <button className="social-primary" disabled={!!busy}>{busy?'Please wait…':mode==='login'?'Login':'Register'}</button>
+  <button className="social-primary passkey-login-btn" type="button" onClick={passkeyLogin} disabled={!!busy}>{busy==='passkey'?'Waiting for device verification…':'🔐 Login with Fingerprint / Passkey'}</button>
   <button type="button" className="social-switch" onClick={()=>{setMode(mode==='login'?'register':'login');setError('');setNotice('')}}>{mode==='login'?"Don't have an account? Register":"Already registered? Login"}</button>
  </form></div>
  const incoming=requests.filter(r=>r.receiver_id===uid&&r.status==='pending'),outgoing=requests.filter(r=>r.sender_id===uid&&r.status==='pending')
@@ -76,6 +92,7 @@ export default function SocialHub(){
     <div className="profile-actions"><button className="social-primary" disabled={busy==='profile'}>{busy==='profile'?'Saving…':'Save changes'}</button><button type="button" className="social-muted-btn" onClick={()=>setEditProfile(false)}>Cancel</button></div>
    </form>:<div className="profile-view"><div className="social-avatar profile-avatar">{display(profile).slice(0,1).toUpperCase()}</div><div><b>{display(profile)}</b><small>{session?.user?.email||'Email not available'}</small><small>Account active · Login stays saved until you log out</small></div></div>}
  </section>
+ <PasskeySecurity/>
  <section className="social-welcome"><div><span className="social-kicker">YOUR FESTIVAL COMMUNITY</span><h1>Celebrate <em>together.</em></h1><p>Discover everyone, send a connection request, and enter the same live Diya room after they accept.</p></div><button className="social-primary custom-room" onClick={createCustom} disabled={!!busy}>{busy==='custom'?'Creating…':'＋ Create custom room'}</button></section>
  {error&&<div className="social-error">{error}</div>}{notice&&<div className="social-notice">{notice}</div>}
  <div className="social-grid"><section className="social-panel"><div className="social-panel-head"><div><h2>People</h2><small>{people.length} registered users</small></div><input className="social-search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search people"/></div>
