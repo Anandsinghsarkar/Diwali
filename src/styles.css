@@ -230,3 +230,24 @@ body{min-height:100%;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrollin
  .countdown-strip{padding:15px 12px}
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* Holi Celebration */
+.holi-page{--holi-gold:#ffd36d}
+.holi-intro{display:flex;align-items:center;gap:15px;padding:18px 20px;margin:20px 0;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:linear-gradient(120deg,rgba(255,70,130,.13),rgba(70,190,255,.12),rgba(255,210,65,.12))}
+.holi-intro>span{font-size:42px}.holi-intro b{font-size:19px}.holi-intro p{margin:5px 0 0;color:var(--muted,#aaa);font-size:13px}
+.holi-toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:15px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.035)}
+.holi-colors,.holi-modes{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.holi-colors button{width:31px;height:31px;border-radius:50%;background:var(--holi-color);border:2px solid rgba(255,255,255,.45);box-shadow:0 2px 10px color-mix(in srgb,var(--holi-color),transparent 55%)}
+.holi-colors button.active{outline:3px solid white;outline-offset:3px;transform:scale(1.08)}
+.holi-modes{margin-left:auto}.holi-modes button{border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:9px 13px;background:rgba(255,255,255,.06);color:inherit}.holi-modes button.active{background:linear-gradient(110deg,#ff4f8b,#ffb33d);border-color:transparent;color:#241020;font-weight:700}
+.holi-arena{position:relative;isolation:isolate;overflow:hidden;min-height:clamp(300px,52vh,560px);margin:18px 0;border:1px solid rgba(255,255,255,.15);border-radius:22px;background:radial-gradient(circle at 20% 25%,rgba(255,80,130,.15),transparent 30%),radial-gradient(circle at 80% 75%,rgba(45,180,255,.16),transparent 32%),linear-gradient(145deg,#11152f,#21132c);touch-action:pan-y;cursor:crosshair}
+.holi-arena-title{position:absolute;top:18px;left:0;right:0;text-align:center;letter-spacing:.16em;font-size:11px;color:#f7d7a0}.holi-arena-title span{color:#ff72a7}
+.holi-arena-hint{position:absolute;left:0;right:0;bottom:24px;text-align:center;color:rgba(255,255,255,.75);font-size:14px;pointer-events:none}
+.holi-burst{position:absolute;width:clamp(70px,12vw,150px);aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%) scale(.15);opacity:0;filter:blur(1px);mix-blend-mode:screen;box-shadow:0 0 30px var(--burst-color);animation:holi-pop 2.5s ease-out forwards;pointer-events:none}
+.holi-burst:before,.holi-burst:after{content:"";position:absolute;inset:-18%;border-radius:48% 52% 61% 39%;background:radial-gradient(circle,var(--burst-color) 0 5%,transparent 7% 100%);background-size:18px 18px;opacity:.8}
+.holi-burst:after{transform:rotate(45deg) scale(.75)}
+.holi-burst.pichkari{width:clamp(150px,28vw,330px);height:28px;aspect-ratio:auto;border-radius:100%;filter:blur(5px);transform:translate(-50%,-50%) rotate(-18deg) scaleX(.1);animation:holi-spray 1.8s ease-out forwards}
+@keyframes holi-pop{0%{opacity:.95;transform:translate(-50%,-50%) scale(.15)}55%{opacity:.85;transform:translate(-50%,-50%) scale(1.2)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.65)}}
+@keyframes holi-spray{0%{opacity:.95;transform:translate(-50%,-50%) rotate(-18deg) scaleX(.1)}45%{opacity:.85;transform:translate(-50%,-50%) rotate(-18deg) scaleX(1)}100%{opacity:0;transform:translate(-50%,-50%) rotate(-18deg) scaleX(1.2)}}
+.holi-special-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}.holi-special-grid article{padding:18px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.035)}.holi-special-grid article>span{font-size:28px}.holi-special-grid b{display:block;margin:8px 0}.holi-special-grid p{margin:0;color:var(--muted,#aaa);font-size:13px;line-height:1.55}
+@media(max-width:650px){.holi-special-grid{grid-template-columns:1fr}.holi-modes{margin-left:0;width:100%}.holi-toolbar{align-items:flex-start}.holi-colors{width:100%}.holi-arena{min-height:380px}}
