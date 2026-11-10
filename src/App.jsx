@@ -7,13 +7,38 @@ import {
 } from 'lucide-react'
 
 const sections = [
-  ['Home', 'home', Sparkles], ['Fireworks', 'fireworks', PartyPopper], ['Virtual Crackers', 'crackers', Stars], ['Gifts & Cards', 'gifts', Gift], ['Love & Friends Chat', 'chat', Heart],
+  ['Home', 'home', Sparkles], ['Holi Celebration', 'holi', Flower2], ['Fireworks', 'fireworks', PartyPopper], ['Virtual Crackers', 'crackers', Stars], ['Gifts & Cards', 'gifts', Gift], ['Love & Friends Chat', 'chat', Heart],
   ['Diya World', 'diyas', Flame], ['Rangoli Studio', 'rangoli', Palette],
   ['Home Decor', 'decor', House], ['Greeting Maker', 'greetings', Gift],
   ['Photo Booth', 'photo', Camera], ['Games', 'games', Gamepad2],
   ['Music', 'music', Music2], ['Celebration Wall', 'wall', Globe2],
   ['Traditions', 'traditions', Heart], ['Night Sky', 'night', MoonStar], ['Surprise Zone', 'surprise', GiftIcon]
 ]
+
+function HoliCelebration(){
+  const [color,setColor]=useState('#ff3b75')
+  const [mode,setMode]=useState('gulal')
+  const [bursts,setBursts]=useState([])
+  const colors=['#ff3b75','#ff9d21','#ffe12e','#35c978','#20b9ff','#9257ff','#ff62d5','#ffffff']
+  const throwColor=e=>{
+    const r=e.currentTarget.getBoundingClientRect()
+    const id=Date.now()+Math.random()
+    setBursts(a=>[...a,{id,x:Math.max(4,Math.min(96,(e.clientX-r.left)/r.width*100)),y:Math.max(5,Math.min(95,(e.clientY-r.top)/r.height*100)),color,mode}].slice(-45))
+    setTimeout(()=>setBursts(a=>a.filter(x=>x.id!==id)),2600)
+  }
+  return <section className="page-section holi-page">
+    <PageTitle eyebrow="FESTIVAL OF COLOURS" title="Holi" accent="Celebration" desc="Throw virtual gulal, spray colourful pichkari effects and celebrate with friends."/>
+    <div className="holi-intro"><span>🌈</span><div><b>Happy Holi!</b><p>Tap or touch the colour arena to spread colours. Choose a colour and switch between Gulal and Pichkari.</p></div></div>
+    <div className="holi-toolbar"><b>Choose your colour</b><div className="holi-colors">{colors.map(c=><button key={c} aria-label={c} className={color===c?'active':''} style={{'--holi-color':c}} onClick={()=>setColor(c)}/>)}</div><div className="holi-modes"><button className={mode==='gulal'?'active':''} onClick={()=>setMode('gulal')}>🌈 Gulal</button><button className={mode==='pichkari'?'active':''} onClick={()=>setMode('pichkari')}>💦 Pichkari</button><button onClick={()=>setBursts([])}>Clear colours</button></div></div>
+    <div className="holi-arena" onPointerUp={throwColor} role="button" tabIndex={0} aria-label="Tap or touch to throw virtual Holi colours">
+      <div className="holi-arena-title">TAP ANYWHERE TO PLAY <span>✦</span></div>
+      {bursts.map(b=><span key={b.id} className={'holi-burst '+(b.mode==='pichkari'?'pichkari':'')} style={{left:b.x+'%',top:b.y+'%',background:b.mode==='pichkari'? 'linear-gradient(90deg,transparent,'+b.color+',transparent)':b.color,'--burst-color':b.color}}/>)}
+      <div className="holi-arena-hint">🙌 Let the colours fly!</div>
+    </div>
+    <div className="holi-special-grid"><article><span>🎨</span><b>Virtual Gulal</b><p>Choose bright colours and spread digital gulal across the celebration arena.</p></article><article><span>💦</span><b>Pichkari Mode</b><p>Switch to a long colourful water-spray animation.</p></article><article><span>🌈</span><b>Rainbow Holi</b><p>Mix every colour and create your own vibrant screen.</p></article></div>
+    <p className="tiny-muted centered">This is a safe, on-screen festival effect. No real water or powder is used.</p>
+  </section>
+}
 
 function makeAudio() {
   const Ctx = window.AudioContext || window.webkitAudioContext
@@ -358,6 +383,7 @@ function App() {
       <section className="countdown-strip"><div><span className="eyebrow">NEXT DIWALI COUNTDOWN</span><b>The celebration returns in</b></div><div className="countdown">{Object.entries(count).map(([k,v])=><div key={k}><strong>{String(v).padStart(2,'0')}</strong><small>{k}</small></div>)}</div></section>
       <section className="section-block"><div className="section-heading"><div><span className="eyebrow">EXPLORE THE MAGIC</span><h2>Your festival, <em>your universe.</em></h2></div><button className="text-link" onClick={()=>go('fireworks')}>Explore all <ChevronRight size={16}/></button></div><div className="feature-grid">{sections.slice(1).map(([label,id,Icon],i)=><button key={id} className="feature-card" onClick={()=>go(id)}><span className="feature-icon"><Icon size={22}/></span><span className="feature-number">0{i+1}</span><h3>{label}</h3><p>{['Create a sky full of color.','Bring a little flame to life.','Draw patterns with light.','Dress up your virtual home.','Send a wish from the heart.','Give your memories a festive frame.','Play a little festival challenge.','Set the mood with gentle sounds.','Share a little happiness.','Discover the meaning behind the light.'][i]}</p><span className="feature-arrow"><ChevronRight size={17}/></span></button>)}</div></section>
       <section className="quote-band"><span>“</span><p>May the light within you shine brighter than the lights around you.</p><small>— A DIWALI WISH</small></section></>}
+      {active==='holi'&&<HoliCelebration/>}
       {active==='fireworks'&&<section className="page-section"><PageTitle eyebrow="THE NIGHT SKY" title="Fireworks" accent="World" desc="A little sparkle goes a long way. Tap anywhere on the canvas and make the night yours."/><Fireworks soundOn={soundOn}/><p className="tiny-muted centered">Sound effects are synthesized in your browser. Turn sound on using the speaker button above.</p></section>}
       {active==='crackers'&&<section className="page-section"><PageTitle eyebrow="THE VIRTUAL FIREWORK GALLERY" title="Cracker" accent="Explorer" desc="Tap a firework to preview its motion, colors and visual pattern — all safely simulated on your screen."/><VirtualCrackers/></section>}
       {active==='gifts'&&<section className="page-section"><PageTitle eyebrow="LITTLE SURPRISES, BIG FEELINGS" title="Gifts &" accent="Cards" desc="Create a thoughtful Diwali card for your partner, friends or family."/><GiftStudio/></section>}
