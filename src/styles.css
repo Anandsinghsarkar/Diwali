@@ -257,3 +257,11 @@ body{min-height:100%;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrollin
 .holi-room-bar button{border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:10px 15px;background:linear-gradient(110deg,#ff4f8b,#ffb33d);color:#241020;font-weight:700}
 .holi-room-bar input{min-width:130px;max-width:180px;border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:10px 14px;background:rgba(0,0,0,.22);color:inherit;text-transform:uppercase}
 .holi-room-error{margin:8px 0;padding:10px;border-radius:10px;background:rgba(180,35,55,.2);color:#ffb9c2;font-size:13px}
+
+.holi-battle{margin:16px 0;padding:16px;border:1px solid rgba(255,255,255,.14);border-radius:18px;background:linear-gradient(130deg,rgba(255,76,140,.12),rgba(80,160,255,.1))}
+.holi-battle-head{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.holi-battle-head small{color:var(--muted,#aaa)}
+.holi-avatar-choices{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.holi-avatar-choices button{font-size:24px;width:44px;height:44px;border-radius:13px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13)}.holi-avatar-choices button.selected{border:2px solid #ff70ad;background:rgba(255,80,150,.2);box-shadow:0 0 18px rgba(255,80,150,.25)}
+.holi-battle-stage{height:145px;position:relative;overflow:hidden;border-radius:15px;background:linear-gradient(180deg,#8dd5ff 0%,#b8e9ff 55%,#69c66a 56%,#369d4c 100%);border:1px solid rgba(255,255,255,.2)}
+.holi-player{position:absolute;bottom:10px;transform:translateX(-50%);font-size:39px;transition:left .22s ease;filter:drop-shadow(0 4px 3px #2448)}.holi-player i{display:block;font:700 10px system-ui;text-align:center;color:#173b28;background:#ffffffc9;border-radius:99px;padding:2px 7px}.holi-player.hit{animation:holi-hit .16s alternate 4}
+@keyframes holi-hit{to{transform:translateX(-50%) rotate(18deg) scale(1.18);filter:drop-shadow(0 0 10px #ff2686)}}
+.holi-battle-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.holi-battle-actions button{padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:inherit;font-weight:700}.holi-battle-actions .splash{background:linear-gradient(100deg,#ff4d91,#ffad35);color:#27101b}
