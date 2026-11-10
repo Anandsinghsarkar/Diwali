@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { supabase, supabaseReady } from './live/supabase.js'
 import {
   Sparkles, Flame, Palette, Gift, Camera, Music2, Volume2, VolumeX,
   Moon, Sun, Menu, X, Download, Share2, Play, Pause, RotateCcw,
@@ -19,24 +20,65 @@ function HoliCelebration(){
   const [color,setColor]=useState('#ff3b75')
   const [mode,setMode]=useState('gulal')
   const [bursts,setBursts]=useState([])
+  const [code,setCode]=useState('')
+  const [entry,setEntry]=useState('')
+  const [room,setRoom]=useState('')
+  const [roomStatus,setRoomStatus]=useState('solo')
+  const [people,setPeople]=useState(1)
+  const [roomError,setRoomError]=useState('')
+  const channelRef=useRef(null)
   const colors=['#ff3b75','#ff9d21','#ffe12e','#35c978','#20b9ff','#9257ff','#ff62d5','#ffffff']
-  const throwColor=e=>{
-    const r=e.currentTarget.getBoundingClientRect()
+  const addBurst=(data)=>{
     const id=Date.now()+Math.random()
-    setBursts(a=>[...a,{id,x:Math.max(4,Math.min(96,(e.clientX-r.left)/r.width*100)),y:Math.max(5,Math.min(95,(e.clientY-r.top)/r.height*100)),color,mode}].slice(-45))
+    setBursts(a=>[...a,{...data,id}].slice(-60))
     setTimeout(()=>setBursts(a=>a.filter(x=>x.id!==id)),2600)
   }
+  useEffect(()=>()=>{if(channelRef.current) supabase?.removeChannel(channelRef.current)},[])
+  const connect=async(raw)=>{
+    const roomCode=String(raw||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8)
+    if(!roomCode)return
+    if(!supabaseReady||!supabase){setRoomError('Multiplayer ke liye Supabase configuration zaroori hai.');return}
+    setRoomError('')
+    if(channelRef.current)await supabase.removeChannel(channelRef.current)
+    const channel=supabase.channel('holi-live-'+roomCode,{config:{broadcast:{self:false},presence:{key:crypto.randomUUID?.()||String(Math.random())}}})
+    channel.on('broadcast',{event:'colour'},({payload})=>addBurst({...payload,remote:true}))
+    channel.on('presence',{event:'sync'},()=>setPeople(Object.keys(channel.presenceState()).length||1))
+    channel.subscribe(async status=>{
+      if(status==='SUBSCRIBED'){
+        channelRef.current=channel
+        await channel.track({joined_at:new Date().toISOString()})
+        setRoom(roomCode);setCode(roomCode);setRoomStatus('live')
+      }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){
+        setRoomError('Room connect nahi hua. Dobara try karo.')
+        setRoomStatus('solo')
+      }
+    })
+  }
+  const createRoom=()=>{const c=Math.random().toString(36).slice(2,8).toUpperCase();setEntry(c);connect(c)}
+  const throwColor=e=>{
+    const r=e.currentTarget.getBoundingClientRect()
+    const payload={x:Math.max(4,Math.min(96,(e.clientX-r.left)/r.width*100)),y:Math.max(8,Math.min(92,(e.clientY-r.top)/r.height*100)),color,mode}
+    addBurst(payload)
+    if(channelRef.current)channelRef.current.send({type:'broadcast',event:'colour',payload})
+  }
+  const leave=async()=>{if(channelRef.current){await supabase.removeChannel(channelRef.current);channelRef.current=null}setRoom('');setRoomStatus('solo');setPeople(1)}
   return <section className="page-section holi-page">
-    <PageTitle eyebrow="FESTIVAL OF COLOURS" title="Holi" accent="Celebration" desc="Throw virtual gulal, spray colourful pichkari effects and celebrate with friends."/>
-    <div className="holi-intro"><span>🌈</span><div><b>Happy Holi!</b><p>Tap or touch the colour arena to spread colours. Choose a colour and switch between Gulal and Pichkari.</p></div></div>
+    <PageTitle eyebrow="FESTIVAL OF COLOURS" title="Holi" accent="Celebration" desc="Create a room, invite friends and spread virtual colours together."/>
+    <div className="holi-intro"><span>🌈</span><div><b>Happy Holi!</b><p>Choose a colour and tap the arena. In a shared room, everyone sees the same gulal and pichkari effects.</p></div></div>
+    <div className="holi-room-bar">
+      {roomStatus==='live'?<><div><b>🟢 Live Holi Room · {room}</b><small>{people} participant{people===1?'':'s'} online · Share this code with friends</small></div><button onClick={()=>{navigator.clipboard?.writeText(room)}}>Copy code</button><button onClick={leave}>Leave room</button></>:<>
+        <button onClick={createRoom}>＋ Create Holi Room</button><input value={entry} maxLength={8} onChange={e=>setEntry(e.target.value.toUpperCase())} placeholder="Enter room code"/><button onClick={()=>connect(entry)}>Join Room</button>
+      </>}
+    </div>
+    {roomError&&<div className="holi-room-error" role="alert">{roomError}</div>}
     <div className="holi-toolbar"><b>Choose your colour</b><div className="holi-colors">{colors.map(c=><button key={c} aria-label={c} className={color===c?'active':''} style={{'--holi-color':c}} onClick={()=>setColor(c)}/>)}</div><div className="holi-modes"><button className={mode==='gulal'?'active':''} onClick={()=>setMode('gulal')}>🌈 Gulal</button><button className={mode==='pichkari'?'active':''} onClick={()=>setMode('pichkari')}>💦 Pichkari</button><button onClick={()=>setBursts([])}>Clear colours</button></div></div>
     <div className="holi-arena" onPointerUp={throwColor} role="button" tabIndex={0} aria-label="Tap or touch to throw virtual Holi colours">
       <div className="holi-arena-title">TAP ANYWHERE TO PLAY <span>✦</span></div>
-      {bursts.map(b=><span key={b.id} className={'holi-burst '+(b.mode==='pichkari'?'pichkari':'')} style={{left:b.x+'%',top:b.y+'%',background:b.mode==='pichkari'? 'linear-gradient(90deg,transparent,'+b.color+',transparent)':b.color,'--burst-color':b.color}}/>)}
-      <div className="holi-arena-hint">🙌 Let the colours fly!</div>
+      {bursts.map(b=><span key={b.id} className={'holi-burst '+(b.mode==='pichkari'?'pichkari':'')} style={{left:b.x+'%',top:b.y+'%',background:b.mode==='pichkari'?'linear-gradient(90deg,transparent,'+b.color+',transparent)':b.color,'--burst-color':b.color}}/>)}
+      <div className="holi-arena-hint">🙌 {roomStatus==='live'?'Everyone in this room sees your colours!':'Let the colours fly!'}</div>
     </div>
-    <div className="holi-special-grid"><article><span>🎨</span><b>Virtual Gulal</b><p>Choose bright colours and spread digital gulal across the celebration arena.</p></article><article><span>💦</span><b>Pichkari Mode</b><p>Switch to a long colourful water-spray animation.</p></article><article><span>🌈</span><b>Rainbow Holi</b><p>Mix every colour and create your own vibrant screen.</p></article></div>
-    <p className="tiny-muted centered">This is a safe, on-screen festival effect. No real water or powder is used.</p>
+    <div className="holi-special-grid"><article><span>🎨</span><b>Virtual Gulal</b><p>Choose bright colours and spread digital gulal across the celebration arena.</p></article><article><span>💦</span><b>Pichkari Mode</b><p>Switch to a long colourful water-spray animation.</p></article><article><span>🌈</span><b>Multiplayer Holi</b><p>Share your room code and celebrate with friends in real time.</p></article></div>
+    <p className="tiny-muted centered">Only colourful on-screen effects are used. No real water or powder.</p>
   </section>
 }
 
