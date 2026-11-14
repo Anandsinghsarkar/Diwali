@@ -16,12 +16,7 @@ export const genCode = mode => {
 export const fmt = n => Number(n || 0).toLocaleString('en-IN')
 export const clampLit = n => Math.max(0, Math.min(MAX_LIT, Math.floor(Number(n) || 0)))
 
-/* ───────── per-diya state ─────────
-   A player's board is { p, holes, extras, lit, flame }:
-   - every index below p is lit, except the ones listed in holes
-   - indices at/after p are unlit, except the ones listed in extras
-   - lit is the running count (kept in sync by applyOp, so scores stay atomic)
-   Lighting or blowing ONE diya only touches that one diya. */
+/* ───────── per-diya state ───────── */
 const norm = cur => ({ p: cur && cur.p != null ? cur.p : (cur && cur.lit) || 0, holes: { ...(cur && cur.holes) }, extras: { ...(cur && cur.extras) }, flame: cur && cur.flame })
 const fin = s => {
   const hk = Object.keys(s.holes).length, ek = Object.keys(s.extras).length
@@ -83,9 +78,12 @@ export function fit(c, ctx) {
   return [W, H]
 }
 
-export const flick = (t, i) => .94 + Math.sin(t * .009 + i * 2.3) * .04 + Math.sin(t * .031 + i) * .025
+export const flick = (t, i, wind = 0) => {
+  const base = .94 + Math.sin(t * .009 + i * 2.3) * .04 + Math.sin(t * .031 + i) * .025
+  return Math.max(0.55, Math.min(1.15, base + wind * 0.08))
+}
 
-/* ───────── flame colours (natural, rainbow, blue, pink, green, violet) ───────── */
+/* ───────── flame colours ───────── */
 export const fhue = (fh, t, i) => (fh === 'rainbow' ? (t * .06 + i * 47) % 360 : ({ blue: 210, pink: 325, green: 135, violet: 275 }[fh] ?? null))
 export const glow = (fh, t, i, a) => { const h = fhue(fh, t, i); return h == null ? `rgba(255,140,50,${a})` : `hsla(${h},100%,58%,${a})` }
 export const glow0 = (fh, t, i) => { const h = fhue(fh, t, i); return h == null ? 'rgba(255,90,20,0)' : `hsla(${h},100%,50%,0)` }
@@ -113,39 +111,94 @@ export function floorPattern() {
   return p
 }
 
-export function drawDiya(ctx, x, y, sc, lit, t, i, fh) {
-  const fl = flick(t, i)
+/** Advanced diya renderer with wind influence and richer multi-layer flame */
+export function drawDiya(ctx, x, y, sc, lit, t, i, fh, wind = 0) {
+  const fl = flick(t, i, wind)
   ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc)
-  ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.ellipse(4, 48, 74, 13, 0, 0, TAU); ctx.fill()
+
+  // shadow
+  ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.ellipse(5 + wind * 2, 50, 76, 14, 0, 0, TAU); ctx.fill()
+
+  // handle
   ctx.fillStyle = '#7d3416'; ctx.beginPath(); ctx.moveTo(-58, -10); ctx.quadraticCurveTo(-82, -14, -88, -6); ctx.quadraticCurveTo(-76, 6, -56, 10); ctx.closePath(); ctx.fill()
+
+  // body gradient
   const g = ctx.createLinearGradient(-66, 0, 66, 0)
-  g.addColorStop(0, '#4a1d0d'); g.addColorStop(.3, '#c0602f'); g.addColorStop(.62, '#9a4220'); g.addColorStop(1, '#341409')
+  g.addColorStop(0, '#4a1d0d'); g.addColorStop(.28, '#c0602f'); g.addColorStop(.6, '#9a4220'); g.addColorStop(1, '#341409')
   ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-66, 0); ctx.bezierCurveTo(-62, 36, -34, 52, 0, 52); ctx.bezierCurveTo(34, 52, 62, 36, 66, 0); ctx.ellipse(0, 0, 66, 19, 0, 0, Math.PI, true); ctx.closePath(); ctx.fill()
+
+  // gold dots
   ctx.fillStyle = '#e2b04e'
-  for (let d = -4; d <= 4; d++) { const dx = d * 12, dy = 31 * Math.sqrt(1 - (dx / 66) ** 2); ctx.beginPath(); ctx.ellipse(dx, dy, 2.6, 1.9, 0, 0, TAU); ctx.fill() }
+  for (let d = -4; d <= 4; d++) {
+    const dx = d * 12, dy = 31 * Math.sqrt(1 - (dx / 66) ** 2)
+    ctx.beginPath(); ctx.ellipse(dx, dy, 2.6, 1.9, 0, 0, TAU); ctx.fill()
+  }
   ctx.strokeStyle = '#e08a52'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(0, 0, 66, 19, 0, 0, TAU); ctx.stroke()
+
+  // oil surface
   const o = ctx.createRadialGradient(0, -2, 4, 0, 0, 56); o.addColorStop(0, '#3a1a0a'); o.addColorStop(1, '#0f0503')
   ctx.fillStyle = o; ctx.beginPath(); ctx.ellipse(0, 1, 56, 14, 0, 0, TAU); ctx.fill()
-  ctx.fillStyle = 'rgba(255,210,170,.14)'; ctx.beginPath(); ctx.ellipse(-30, 22, 14, 7, -.5, 0, TAU); ctx.fill()
+  ctx.fillStyle = 'rgba(255,210,170,.16)'; ctx.beginPath(); ctx.ellipse(-30, 22, 14, 7, -.5, 0, TAU); ctx.fill()
+
+  // wick
   ctx.fillStyle = '#1b0e08'; ctx.fillRect(-2.5, -14, 5, 15)
+
   if (lit) {
     const H = fhue(fh, t, i), nat = H == null
     ctx.globalCompositeOperation = 'lighter'
-    let r = ctx.createRadialGradient(0, -2, 2, 0, -2, 54); r.addColorStop(0, nat ? `rgba(255,170,70,${.7 * fl})` : `hsla(${H},100%,60%,${.7 * fl})`); r.addColorStop(1, nat ? 'rgba(255,100,20,0)' : `hsla(${H},100%,50%,0)`)
+
+    // base glow on oil
+    let r = ctx.createRadialGradient(0, -2, 2, 0, -2, 54)
+    r.addColorStop(0, nat ? `rgba(255,170,70,${.72 * fl})` : `hsla(${H},100%,60%,${.72 * fl})`)
+    r.addColorStop(1, nat ? 'rgba(255,100,20,0)' : `hsla(${H},100%,50%,0)`)
     ctx.fillStyle = r; ctx.beginPath(); ctx.ellipse(0, 1, 56, 14, 0, 0, TAU); ctx.fill()
-    r = ctx.createRadialGradient(0, 0, 10, 0, 0, 110); r.addColorStop(0, nat ? `rgba(255,140,50,${.35 * fl})` : `hsla(${H},100%,55%,${.35 * fl})`); r.addColorStop(1, nat ? 'rgba(255,100,20,0)' : `hsla(${H},100%,50%,0)`)
-    ctx.fillStyle = r; ctx.fillRect(-120, -80, 240, 160)
-    const h = 62 * fl, w = 15, sway = Math.sin(t * .0042 + i * 1.7) * 3.4 + Math.sin(t * .0113 + i) * 1.9
-    const drop = (s, c0, c1) => {
+
+    // wide ambient glow
+    r = ctx.createRadialGradient(0, 0, 10, 0, 0, 120)
+    r.addColorStop(0, nat ? `rgba(255,140,50,${.38 * fl})` : `hsla(${H},100%,55%,${.38 * fl})`)
+    r.addColorStop(1, nat ? 'rgba(255,100,20,0)' : `hsla(${H},100%,50%,0)`)
+    ctx.fillStyle = r; ctx.fillRect(-130, -90, 260, 180)
+
+    // multi-layer flame with wind sway
+    const h = 68 * fl
+    const w = 16
+    const sway = Math.sin(t * .0042 + i * 1.7) * 3.8 + Math.sin(t * .0113 + i) * 2.1 + wind * 9
+
+    const drop = (s, c0, c1, extraSway = 0) => {
       ctx.save(); ctx.translate(0, -13); ctx.scale(s, s)
-      const gr = ctx.createLinearGradient(0, 0, 0, -h); gr.addColorStop(0, c0); gr.addColorStop(1, c1); ctx.fillStyle = gr
-      ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(-w * 1.15, -h * .22, -w * .7, -h * .62, sway, -h); ctx.bezierCurveTo(w * .7, -h * .62, w * 1.15, -h * .22, 0, 0); ctx.fill(); ctx.restore()
+      const gr = ctx.createLinearGradient(0, 0, 0, -h)
+      gr.addColorStop(0, c0); gr.addColorStop(1, c1)
+      ctx.fillStyle = gr
+      ctx.beginPath()
+      ctx.moveTo(0, 0)
+      ctx.bezierCurveTo(-w * 1.2, -h * .2, -w * .75, -h * .58, sway + extraSway, -h)
+      ctx.bezierCurveTo(w * .75, -h * .58, w * 1.2, -h * .2, 0, 0)
+      ctx.fill()
+      ctx.restore()
     }
-    if (nat) { drop(1, 'rgba(255,100,10,.9)', 'rgba(255,170,40,.1)'); drop(.74, 'rgba(255,185,50,1)', 'rgba(255,235,140,.25)'); drop(.42, 'rgba(255,248,215,1)', 'rgba(255,255,255,.2)') }
-    else { drop(1, `hsla(${H},100%,50%,.9)`, `hsla(${H + 15},100%,60%,.1)`); drop(.74, `hsla(${H + 10},100%,62%,1)`, `hsla(${H + 20},100%,80%,.25)`); drop(.42, `hsla(${H + 25},100%,94%,1)`, `hsla(${H + 25},100%,96%,.2)`) }
-    ctx.fillStyle = nat ? 'rgba(80,120,255,.5)' : `hsla(${H + 200},100%,65%,.5)`; ctx.beginPath(); ctx.ellipse(0, -17, 4.5, 7, 0, 0, TAU); ctx.fill()
-    r = ctx.createRadialGradient(0, -45, 4, 0, -45, 150); r.addColorStop(0, nat ? `rgba(255,170,70,${.4 * fl})` : `hsla(${H},100%,60%,${.4 * fl})`); r.addColorStop(1, nat ? 'rgba(255,100,20,0)' : `hsla(${H},100%,50%,0)`)
-    ctx.fillStyle = r; ctx.fillRect(-160, -200, 320, 320)
+
+    if (nat) {
+      drop(1.05, 'rgba(255,90,8,.92)', 'rgba(255,160,35,.08)', wind * 1.5)
+      drop(0.82, 'rgba(255,175,45,1)', 'rgba(255,230,130,.22)')
+      drop(0.52, 'rgba(255,245,200,1)', 'rgba(255,255,255,.28)')
+      drop(0.28, 'rgba(255,255,250,.95)', 'rgba(255,255,255,.15)')
+    } else {
+      drop(1.05, `hsla(${H},100%,48%,.92)`, `hsla(${H + 18},100%,58%,.08)`, wind * 1.5)
+      drop(0.82, `hsla(${H + 8},100%,60%,1)`, `hsla(${H + 22},100%,78%,.22)`)
+      drop(0.52, `hsla(${H + 22},100%,92%,1)`, `hsla(${H + 28},100%,96%,.28)`)
+      drop(0.28, `hsla(${H + 30},100%,97%,.9)`, `hsla(${H + 30},100%,98%,.12)`)
+    }
+
+    // blue core
+    ctx.fillStyle = nat ? 'rgba(70,110,255,.55)' : `hsla(${H + 200},100%,65%,.55)`
+    ctx.beginPath(); ctx.ellipse(0, -18, 5, 8, 0, 0, TAU); ctx.fill()
+
+    // top plume
+    r = ctx.createRadialGradient(0, -50, 4, 0, -50, 160)
+    r.addColorStop(0, nat ? `rgba(255,170,70,${.42 * fl})` : `hsla(${H},100%,60%,${.42 * fl})`)
+    r.addColorStop(1, nat ? 'rgba(255,100,20,0)' : `hsla(${H},100%,50%,0)`)
+    ctx.fillStyle = r; ctx.fillRect(-170, -220, 340, 340)
+
     ctx.globalCompositeOperation = 'source-over'
   }
   ctx.restore()
