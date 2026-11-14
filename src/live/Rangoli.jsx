@@ -114,7 +114,7 @@ export default function Rangoli({ send, live, stampsRef, sub, lights }) {
     const [x, y] = pos(e), [lx, ly] = last.current
     const d = Math.hypot((x - lx) * S, (y - ly) * S), step = Math.max(2, opt.current.size * .45), n = Math.floor(d / step)
     if (!n) return
-    for (let k =  stat = 1; k <= n; k++) stampAt(lx + (x - lx) * k / n, ly + (y - ly) * k / n)
+    for (let k = 1; k <= n; k++) stampAt(lx + (x - lx) * k / n, ly + (y - ly) * k / n)
     last.current = [x, y]
   }
   const clear = () => { resetQ(); base(); stampsRef.current = []; if (live) send({ t: 'rclear' }) }
