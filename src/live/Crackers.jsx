@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { TAU, mulberry32, pick, rnd } from './common.js'
 
-const SHELLS = ['peony', 'chrys', 'willow', 'ring', 'heart', 'crackle', 'palm']
+const SHELLS = ['peony', 'chrys', 'willow', 'ring', 'heart', 'crackle', 'palm', 'multibreak']
 const GROUND = ['anar', 'chakri', 'ladi', 'bomb', 'sparkler']
-const LABEL = { random: 'Random', peony: 'Peony', chrys: 'Chrysanthemum', willow: 'Willow', ring: 'Ring', heart: 'Heart', crackle: 'Crackle', palm: 'Palm', anar: 'Anar', chakri: 'Chakri', ladi: 'Ladi', bomb: 'Atom bomb', sparkler: 'Phuljhadi' }
+const LABEL = { random: 'Random', peony: 'Peony', chrys: 'Chrysanthemum', willow: 'Willow', ring: 'Ring', heart: 'Heart', crackle: 'Crackle', palm: 'Palm', multibreak: 'Multi-Break', anar: 'Anar', chakri: 'Chakri', ladi: 'Ladi', bomb: 'Atom bomb', sparkler: 'Phuljhadi' }
 const HUES = [['Random', -1], ['Multi', -2], ['Rainbow', -3], ['Gold', 42], ['Red', 2], ['Green', 130], ['Blue', 212], ['Pink', 325], ['Violet', 275], ['Cyan', 185], ['Orange', 28]]
 
 export default function Crackers({ send, sub, couple }) {
@@ -40,6 +40,10 @@ export default function Crackers({ send, sub, couple }) {
     }
     const crack = (gain = .22) => hit(0, { dur: .1, f0: 7000, f1: 1200, gain, thump: false, type: 'highpass' })
 
+    const vibrate = (pattern = 40) => {
+      try { if (navigator.vibrate) navigator.vibrate(pattern) } catch {}
+    }
+
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, 2); W = c.clientWidth; H = c.clientHeight; f = Math.max(.6, Math.min(1.6, H / 650))
       for (const k of [c, sk]) { k.width = Math.round(W * dpr); k.height = Math.round(H * dpr) }
@@ -60,14 +64,24 @@ export default function Crackers({ send, sub, couple }) {
 
     const addP = (x, y, vx, vy, o) => parts.push({ x, y, px: x, py: y, vx, vy, life: 1, decay: .012, drag: .97, g: .035, size: 1.6, h: 40, s: 100, tw: false, crackle: false, ...o })
 
-    const burst = (x, y, kind, hue) => {
+    const burst = (x, y, kind, hue, isSub = false) => {
       const base = hue >= 0 ? hue : rnd(0, 360), alt = (base + rnd(70, 180)) % 360
       const col = () => hue === -2 ? pick([base, alt, 42, 0]) : hue === -3 ? rnd(0, 360) : base + rnd(-10, 10)
       const sph = () => { const th = rnd(0, TAU), ph = Math.acos(rnd(-1, 1)); return [Math.sin(ph) * Math.cos(th), Math.sin(ph) * Math.sin(th)] }
       let sp = rnd(3.4, 4.4) * f
-      if (kind === 'peony') {
+      if (kind === 'peony' || kind === 'multibreak') {
         for (let i = 0; i < 110; i++) { const [a, b] = sph(); addP(x, y, a * sp, b * sp, { h: col(), decay: rnd(.011, .016) }) }
         for (let i = 0; i < 28; i++) { const [a, b] = sph(); addP(x, y, a * sp * .4, b * sp * .4, { h: alt, decay: .02, size: 1.3 }) }
+        if (kind === 'multibreak' && !isSub) {
+          // secondary breaks
+          for (let k = 0; k < 5; k++) {
+            setTimeout(() => {
+              const [a, b] = sph()
+              const nx = x + a * 40, ny = y + b * 40
+              burst(nx, ny, 'peony', hue, true)
+            }, 280 + k * 90)
+          }
+        }
       } else if (kind === 'chrys') {
         for (let i = 0; i < 95; i++) { const [a, b] = sph(); addP(x, y, a * sp, b * sp, { h: col(), decay: rnd(.007, .01), drag: .975, tw: true, size: 1.9 }) }
       } else if (kind === 'willow') {
@@ -88,14 +102,15 @@ export default function Crackers({ send, sub, couple }) {
       const dly = .25 + (1 - y / H) * .35
       hit(dly, { gain: kind === 'heart' || kind === 'ring' ? .28 : .4 })
       if (kind === 'crackle') for (let i = 0; i < 9; i++) hit(dly + .5 + i * rnd(.05, .2), { dur: .08, f0: 6000, f1: 800, gain: .12, thump: false, type: 'highpass' })
+      if (kind === 'multibreak' || kind === 'bomb') vibrate([30, 40, 60])
     }
 
-    // one cracker going off on the ground: flash, sparks, red paper, a sharp crack
     const pop = (x, y) => {
       flashes.push({ x, y, life: .8, h: 30, R: 90 })
       for (let i = 0; i < 10; i++) addP(x, y, rnd(-3, 3) * f, rnd(-4, -.5) * f, { h: rnd(20, 50), decay: .06, g: .12, size: 1.4 })
       for (let i = 0; i < 6; i++) addP(x, y, rnd(-2, 2), rnd(-3.5, -1), { h: 0, s: 90, decay: .02, g: .15, size: 2.4, drag: .95 })
       crack(.2)
+      vibrate(25)
     }
 
     const launch = (xn, yn, kind, hue) => {
@@ -149,6 +164,7 @@ export default function Crackers({ send, sub, couple }) {
             for (let j = 0; j < 50; j++) addP(e.x, e.y, rnd(-6, 6) * f, rnd(-9, -1) * f, { h: rnd(15, 45), s: 60, decay: rnd(.02, .04), g: .22, size: 2 })
             shakeUntil = performance.now() + 350
             hit(0, { dur: 1.3, f0: 1800, f1: 45, gain: .9 })
+            vibrate([80, 30, 120])
           }
           done = e.t > 900
         } else {
@@ -165,7 +181,7 @@ export default function Crackers({ send, sub, couple }) {
         if (done) emitters.splice(i, 1)
       }
 
-      for (let i = shocks.length - 1; i >= 0; i--) {
+      for (let i = shocks.length - 1; i >= 0; i--) ext: {
         const s = shocks[i]; s.r += 16 * k * f; s.life -= .05 * k
         if (s.life <= 0) { shocks.splice(i, 1); continue }
         ctx.strokeStyle = `rgba(255,220,170,${s.life * .5})`; ctx.lineWidth = 3 * s.life; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.stroke()
@@ -227,13 +243,13 @@ export default function Crackers({ send, sub, couple }) {
     loop()
     return () => clearTimeout(t)
   }, [auto])
-  const finale = () => { api.current.ensureAudio?.(); for (let i = 0; i < 14; i++) setTimeout(() => fire(rnd(.08, .92), rnd(.1, .45), pick(SHELLS), -2), i * 180) }
+  const finale = () => { api.current.ensureAudio?.(); for (let i = 0; i < 16; i++) setTimeout(() => fire(rnd(.08, .92), rnd(.1, .45), pick(SHELLS), -2), i * 160) }
 
   const kinds = couple ? ['heart', 'random', ...SHELLS.filter(s => s !== 'heart'), ...GROUND] : ['random', ...SHELLS, ...GROUND]
   return <div className="lv-fw">
     <canvas ref={skyRef} />
     <canvas ref={cv} className="lv-fw-top" onPointerDown={fireAt} />
-    <div className="lv-cap"><span className="lv-eye">TAP THE SKY · SOUND {sound ? 'ON' : 'OFF'}</span><div className="lv-fw-title-row"><h2>Night <em>sky</em></h2><button className="lv-fw-toggle" onClick={() => setControlsVisible(v => !v)} aria-expanded={controlsVisible}>{controlsVisible ? "Hide controls" : "Show controls"}</button></div><p>Ground crackers go off where you tap. Everyone in the room sees yours.</p></div>
+    <div className="lv-cap"><span className="lv-eye">TAP THE SKY · HAPTIC ON HEAVY CRACKERS</span><div className="lv-fw-title-row"><h2>Night <em>sky</em></h2><button className="lv-fw-toggle" onClick={() => setControlsVisible(v => !v)} aria-expanded={controlsVisible}>{controlsVisible ? "Hide controls" : "Show controls"}</button></div><p>Ground crackers go off where you tap. Multi-Break shells explode twice. Everyone in the room sees yours.</p></div>
     {controlsVisible && <div className="lv-hud">
       {kinds.map(k => <button key={k} className={'lv-btn' + (kind === k ? ' on' : '')} onClick={() => setKind(k)}>{LABEL[k]}</button>)}
       <span style={{ width: '100%' }} />
