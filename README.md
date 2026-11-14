@@ -1,4 +1,4 @@
-# 🪔 DiwaliVerse — Android-Friendly Diwali Website
+# 🪔 DiwaliVerse — Advanced Android-Friendly Diwali Website
 
 DiwaliVerse is a responsive, mobile-first Diwali celebration website built with React and Vite. It runs directly in Chrome and other Android browsers — no APK or app installation is required.
 
@@ -13,6 +13,30 @@ DiwaliVerse is a responsive, mobile-first Diwali celebration website built with 
 - Discover registered users and send/accept/decline connection requests.
 - Shared private Diya rooms with realtime presence, chat and activities.
 - Supabase Auth session persistence until logout.
+
+## Advanced / Unique Features (New)
+
+### Diya World (Next-level)
+- **Hyper-realistic multi-layer flames** with natural sway and wind influence
+- **Mic Blow-to-Extinguish**: Enable the mic button and blow into your phone/laptop mic to extinguish the latest diya (real breath detection via Web Audio)
+- **Device Tilt Wind**: Tilt your phone — flames lean with the wind and smoke drifts accordingly
+- Richer embers, smoke and ambient glow
+- Multiple flame styles: Natural, Rainbow, Blue, Pink, Green, Violet
+
+### Rangoli Studio
+- **Living Glow Mode**: Soft pulsing golden light over the entire rangoli that feels alive
+- High-quality powder simulation with shadow + highlight grains
+- 4 / 6 / 8 / 12-fold symmetry + mirror
+- Auto-pour mandala, eraser, PNG download
+- Corner diyas that light up as the room’s total diyas grow
+
+### Night Sky / Crackers
+- **Multi-Break shells** — primary burst followed by secondary smaller explosions
+- **Haptic feedback** on mobile for heavy crackers (bomb, multi-break, ladi)
+- Classic shells: Peony, Chrysanthemum, Willow, Ring, Heart, Crackle, Palm
+- Ground crackers: Anar, Chakri, Ladi, Atom bomb, Phuljhadi (sparkler)
+- Auto show + Grand Finale
+- Realistic sound design with Web Audio + screen shake
 
 ## Android phone experience
 
@@ -78,7 +102,7 @@ Import this repository into Vercel:
 
 ## Tech stack
 
-React · Vite · CSS · Canvas 2D · Web Audio API · Supabase Auth · Supabase Database · Supabase Realtime
+React · Vite · CSS · Canvas 2D · Web Audio API · Device Orientation · MediaDevices (mic) · Supabase Auth · Supabase Database · Supabase Realtime
 
 ---
 
