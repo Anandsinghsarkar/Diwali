@@ -8,10 +8,12 @@ export default function Rangoli({ send, live, stampsRef, sub, lights }) {
   const pending = useRef([]), last = useRef(null)
   const q = useRef({ list: [], i: 0, raf: 0 })
   const [col, setCol] = useState(0), [size, setSize] = useState(9), [sym, setSym] = useState(8), [mir, setMir] = useState(true), [erase, setErase] = useState(false)
+  const [living, setLiving] = useState(true)
   const opt = useRef({}); opt.current = { col, size, sym, mir, erase }
   const sendRef = useRef(send); sendRef.current = send
   const liveRef = useRef(live); liveRef.current = live
   const lightsRef = useRef(lights); lightsRef.current = lights
+  const livingRef = useRef(true); livingRef.current = living
 
   const base = useCallback(() => {
     const ctx = cv.current.getContext('2d'), r = mulberry32(7)
@@ -21,7 +23,6 @@ export default function Rangoli({ send, live, stampsRef, sub, lights }) {
     for (let gy = 50; gy < S; gy += 50) for (let gx = 50; gx < S; gx += 50) if (Math.hypot(gx - S / 2, gy - S / 2) < 420) { ctx.beginPath(); ctx.arc(gx, gy, 2.2, 0, TAU); ctx.fill() }
   }, [])
 
-  // powder: each grain gets a tiny shadow and an occasional bright speck so it reads as raised dust
   const apply = useCallback(s => {
     const ctx = cv.current.getContext('2d'), [nx, ny, c, r, sy, mi, seed] = s
     const px = nx * S - S / 2, py = ny * S - S / 2
@@ -69,18 +70,31 @@ export default function Rangoli({ send, live, stampsRef, sub, lights }) {
     return () => { off(); clearInterval(id); resetQ() }
   }, [base, enqueue, resetQ, stampsRef, sub])
 
-  // warm light that flickers over the floor; corner diyas light up as the room's total grows
+  // Living glow overlay + corner diyas
   useEffect(() => {
     const c = ov.current, ctx = c.getContext('2d'); let raf = 0
     const frame = t => {
       const [W, H] = fit(c, ctx); ctx.clearRect(0, 0, W, H)
       const L = lightsRef.current, sc = Math.max(.3, W / 900) * .6
       const corners = [[.1, .1], [.9, .1], [.1, .9], [.9, .9]]
+
+      // Living soft pulse over the whole rangoli
+      if (livingRef.current) {
+        const pulse = 0.04 + 0.03 * Math.sin(t * 0.0018)
+        ctx.globalCompositeOperation = 'lighter'
+        const g = ctx.createRadialGradient(W/2, H/2, 20, W/2, H/2, Math.max(W, H) * 0.55)
+        g.addColorStop(0, `rgba(255,180,80,${pulse})`)
+        g.addColorStop(0.6, `rgba(255,120,40,${pulse * 0.35})`)
+        g.addColorStop(1, 'rgba(255,80,20,0)')
+        ctx.fillStyle = g
+        ctx.fillRect(0, 0, W, H)
+      }
+
       ctx.globalCompositeOperation = 'lighter'
       corners.forEach(([u, v], i) => {
         if (i >= L) return
         const x = W * u, y = H * v, R = W * .6, g = ctx.createRadialGradient(x, y, 4, x, y, R)
-        g.addColorStop(0, `rgba(255,150,60,${.2 * flick(t, i)})`); g.addColorStop(1, 'rgba(255,100,20,0)')
+        g.addColorStop(0, `rgba(255,150,60,${.22 * flick(t, i)})`); g.addColorStop(1, 'rgba(255,100,20,0)')
         ctx.fillStyle = g; ctx.fillRect(0, 0, W, H)
       })
       ctx.globalCompositeOperation = 'source-over'
@@ -100,7 +114,7 @@ export default function Rangoli({ send, live, stampsRef, sub, lights }) {
     const [x, y] = pos(e), [lx, ly] = last.current
     const d = Math.hypot((x - lx) * S, (y - ly) * S), step = Math.max(2, opt.current.size * .45), n = Math.floor(d / step)
     if (!n) return
-    for (let k = 1; k <= n; k++) stampAt(lx + (x - lx) * k / n, ly + (y - ly) * k / n)
+    for (let k =  stat = 1; k <= n; k++) stampAt(lx + (x - lx) * k / n, ly + (y - ly) * k / n)
     last.current = [x, y]
   }
   const clear = () => { resetQ(); base(); stampsRef.current = []; if (live) send({ t: 'rclear' }) }
@@ -125,10 +139,11 @@ export default function Rangoli({ send, live, stampsRef, sub, lights }) {
       <label>Symmetry<select value={sym} onChange={e => setSym(+e.target.value)}>{[[1, 'Off'], [4, '4-fold'], [6, '6-fold'], [8, '8-fold'], [12, '12-fold']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
       <button className={'lv-btn' + (mir ? ' on' : '')} onClick={() => setMir(v => !v)}>Mirror {mir ? 'on' : 'off'}</button>
       <button className={'lv-btn' + (erase ? ' on' : '')} onClick={() => setErase(v => !v)}>Eraser</button>
+      <button className={'lv-btn' + (living ? ' on gold' : '')} onClick={() => setLiving(v => !v)}>{living ? '✨ Living Glow ON' : 'Living Glow'}</button>
       <button className="lv-btn" onClick={preset}>Auto-pour a mandala</button>
       <button className="lv-btn" onClick={clear}>Clear floor</button>
       <button className="lv-btn gold" onClick={download}>Download PNG</button>
-      <small style={{ color: '#a99f8a' }}>Corner diyas light up as the room's total diyas grow: 1, 10, 100, 1000.</small>
+      <small style={{ color: '#a99f8a' }}>Corner diyas light as total diyas grow. Living Glow makes the rangoli pulse softly.</small>
     </div>
   </div>
 }
