@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { PER_PAGE, drawDiya, fit, flick, floorPattern, fmt, rnd, isOn, extentOf } from './common.js'
+import { PER_PAGE, drawDiya, fit, flick, floorPattern, fmt, rnd, isOn, extentOf, puffSound } from './common.js'
 
 export default function DiyaBoard({ users, players, me, online, live, couple = false, act, race, scores, offset }) {
   const cv = useRef(null)
@@ -16,8 +16,12 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
   const [bulk, setBulk] = useState('')
   const [jump, setJump] = useState('')
   const [now, setNow] = useState(Date.now())
-  const [seen, setSeen] = useState(0)
   const [controlsVisible, setControlsVisible] = useState(true)
+  const [micOn, setMicOn] = useState(false)
+  const [wind, setWind] = useState(0)
+  const micRef = useRef(null)
+  const windRef = useRef(0)
+  windRef.current = wind
 
   useEffect(() => { setView(v => users.some(u => u.id === v) ? v : me) }, [users, me])
   const board = players[view] || { lit: 0 }
@@ -37,6 +41,73 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
   }, [pg, pages])
   st.current = { lit, pg, view }
 
+  // Device tilt wind
+  useEffect(() => {
+    const onOrient = e => {
+      if (e.gamma == null) return
+      const w = Math.max(-1.4, Math.min(1.4, (e.gamma || 0) / 35))
+      setWind(w)
+    }
+    window.addEventListener('deviceorientation', onOrient)
+    return () => window.removeEventListener('deviceorientation', onOrient)
+  }, [])
+
+  // Mic blow detection
+  useEffect(() => {
+    if (!micOn) {
+      if (micRef.current) {
+        micRef.current.stream?.getTracks().forEach(t => t.stop())
+        micRef.current = null
+      }
+      return
+    }
+    let cancelled = false
+    const start = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false })
+        if (cancelled) { stream.getTracks().forEach(t => t.stop()); return }
+        const ac = new (window.AudioContext || window.webkitAudioContext)()
+        const src = ac.createMediaStreamSource(stream)
+        const analyser = ac.createAnalyser()
+        analyser.fftSize = 256
+        src.connect(analyser)
+        const data = new Uint8Array(analyser.frequencyBinCount)
+        micRef.current = { stream, ac, analyser, data }
+
+        const check = () => {
+          if (!micRef.current || cancelled) return
+          analyser.getByteFrequencyData(data)
+          let sum = 0
+          for (let i = 2; i < 40; i++) sum += data[i]
+          const avg = sum / 38
+          // strong breath / blow detected
+          if (avg > 48 && mine && live) {
+            const idx = Math.max(0, extent - 1)
+            if (isOn(board, idx)) {
+              act.diya(view, idx, 'blow')
+              puffSound()
+            }
+          }
+          micRef.current.raf = requestAnimationFrame(check)
+        }
+        check()
+      } catch (err) {
+        console.warn('Mic access failed', err)
+        setMicOn(false)
+      }
+    }
+    start()
+    return () => {
+      cancelled = true
+      if (micRef.current) {
+        cancelAnimationFrame(micRef.current.raf)
+        micRef.current.stream?.getTracks().forEach(t => t.stop())
+        micRef.current.ac?.close()
+        micRef.current = null
+      }
+    }
+  }, [micOn, mine, live, view, extent, board, act])
+
   useEffect(() => {
     if (!race) return
     const id = setInterval(() => { const n = Date.now(); setNow(n); if (n + offset > race.start + race.dur + 500) clearInterval(id) }, 250)
@@ -47,7 +118,6 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
   const phase = !race ? 'none' : t0 < race.start ? 'count' : t0 < race.start + race.dur ? 'run' : 'done'
   const remain = race ? Math.max(0, Math.ceil((race.start + race.dur - t0) / 1000)) : 0
   const cd = race ? Math.max(0, Math.ceil((race.start - t0) / 1000)) : 0
-  const phaseRef = useRef(phase); phaseRef.current = phase
 
   useEffect(() => {
     const c = cv.current, ctx = c.getContext('2d')
@@ -65,7 +135,7 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
       if (prev.view === V && prev.pg === P) {
         for (let i = 0; i < PER_PAGE; i++) if (prev.on[i] && !currentOn[i] && smoke.length < 300) {
           const [x, y] = pos(i)
-          for (let k = 0; k < 7; k++) smoke.push({ x: x + rnd(-4, 4) * sc, y: y - 20 * sc, vx: rnd(-.25, .25), vy: -rnd(.4, 1), life: 1, r: rnd(8, 16) * sc })
+          for (let k = 0; k < 8; k++) smoke.push({ x: x + rnd(-4, 4) * sc, y: y - 20 * sc, vx: rnd(-.3, .3) + windRef.current * .4, vy: -rnd(.5, 1.2), life: 1, r: rnd(9, 18) * sc })
         }
       }
       prev.view = V; prev.pg = P; prev.on = currentOn
@@ -73,35 +143,38 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
 
       ctx.globalCompositeOperation = 'source-over'
       ctx.fillStyle = pat; ctx.fillRect(0, 0, W, H)
-      const vg = ctx.createRadialGradient(W / 2, H * .6, H * .2, W / 2, H * .6, Math.max(W, H) * .75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.78)')
+      const vg = ctx.createRadialGradient(W / 2, H * .6, H * .2, W / 2, H * .6, Math.max(W, H) * .75)
+      vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.78)')
       ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H)
 
       ctx.globalCompositeOperation = 'lighter'
       for (let i = 0; i < PER_PAGE; i++) {
         if (!on(i)) continue
-        const [x, y] = pos(i), fl = flick(t, i), R = 230 * sc
-        const g = ctx.createRadialGradient(x, y + 30 * sc, 8, x, y + 30 * sc, R); g.addColorStop(0, `rgba(255,140,50,${.3 * fl})`); g.addColorStop(1, 'rgba(255,90,20,0)')
+        const [x, y] = pos(i), fl = flick(t, i, windRef.current), R = 240 * sc
+        const g = ctx.createRadialGradient(x, y + 30 * sc, 8, x, y + 30 * sc, R)
+        g.addColorStop(0, `rgba(255,140,50,${.32 * fl})`); g.addColorStop(1, 'rgba(255,90,20,0)')
         ctx.fillStyle = g; ctx.fillRect(x - R, y + 30 * sc - R, R * 2, R * 2)
-        if (embers.length < 150 && Math.random() < .03) embers.push({ x: x + rnd(-5, 5) * sc, y: y - 40 * sc, vx: rnd(-.3, .3), vy: -rnd(.6, 1.6), life: 1 })
+        if (embers.length < 180 && Math.random() < .04) embers.push({ x: x + rnd(-6, 6) * sc, y: y - 42 * sc, vx: rnd(-.4, .4) + windRef.current * .6, vy: -rnd(.7, 1.8), life: 1 })
       }
       ctx.globalCompositeOperation = 'source-over'
       for (let i = 0; i < PER_PAGE; i++) {
         const [x, y] = pos(i)
-        drawDiya(ctx, x, y, sc, on(i), t, P * PER_PAGE + i, playersRef.current[V]?.flame || 'natural')
-        ctx.fillStyle = 'rgba(246,236,214,.38)'; ctx.font = `${Math.max(9, 12 * sc * 1.4)}px Inter,sans-serif`; ctx.textAlign = 'center'
-        ctx.fillText(fmt(P * PER_PAGE + i + 1), x, y + 74 * sc)
+        drawDiya(ctx, x, y, sc, on(i), t, P * PER_PAGE + i, playersRef.current[V]?.flame || 'natural', windRef.current)
+        ctx.fillStyle = 'rgba(246,236,214,.4)'; ctx.font = `${Math.max(9, 12 * sc * 1.4)}px Inter,sans-serif`; ctx.textAlign = 'center'
+        ctx.fillText(fmt(P * PER_PAGE + i + 1), x, y + 76 * sc)
       }
       ctx.globalCompositeOperation = 'lighter'
       for (let i = embers.length - 1; i >= 0; i--) {
-        const e = embers[i]; e.x += e.vx; e.y += e.vy; e.vx += rnd(-.03, .03); e.life -= .008
+        const e = embers[i]; e.x += e.vx; e.y += e.vy; e.vx += rnd(-.04, .04); e.life -= .009
         if (e.life <= 0) { embers.splice(i, 1); continue }
-        ctx.fillStyle = `rgba(255,170,70,${e.life})`; ctx.fillRect(e.x, e.y, 2, 2)
+        ctx.fillStyle = `rgba(255,170,70,${e.life})`; ctx.fillRect(e.x, e.y, 2.2, 2.2)
       }
       ctx.globalCompositeOperation = 'source-over'
       for (let i = smoke.length - 1; i >= 0; i--) {
-        const s = smoke[i]; s.x += s.vx + Math.sin(t * .003 + i) * .2; s.y += s.vy; s.r += .35; s.life -= .012
+        const s = smoke[i]; s.x += s.vx + Math.sin(t * .003 + i) * .25; s.y += s.vy; s.r += .4; s.life -= .013
         if (s.life <= 0) { smoke.splice(i, 1); continue }
-        const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r); g.addColorStop(0, `rgba(190,180,175,${.22 * s.life})`); g.addColorStop(1, 'rgba(190,180,175,0)')
+        const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r)
+        g.addColorStop(0, `rgba(190,180,175,${.24 * s.life})`); g.addColorStop(1, 'rgba(190,180,175,0)')
         ctx.fillStyle = g; ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2)
       }
       raf = requestAnimationFrame(frame)
@@ -111,11 +184,11 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
   }, [])
 
   const viewName = users.find(u => u.id === view)?.name || 'Them'
-  // blow out someone else's diyas; short cooldown so it stays a prank, not a wipe
   const puff = (index, ms = 450) => {
     if (cool.current || mine || !live) return
     cool.current = true; setCoolUi(true)
     act.diya(view, index, 'blow')
+    puffSound()
     setTimeout(() => { cool.current = false; setCoolUi(false) }, ms)
   }
   const tap = idx => {
@@ -140,8 +213,6 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
   const myLit = players[me]?.lit || 0
   const d = other ? myLit - other.lit : 0
   const msg = !live || !other ? '' : d > 0 ? `You lead ${other.name} by ${fmt(d)}` : d < 0 ? `${other.name} leads by ${fmt(-d)}` : 'Dead heat'
-  const rr = ranked.map(u => ({ id: u.id, name: u.name, n: u.sc })).sort((a, b) => b.n - a.n)
-  const tie = rr.length > 1 && rr[0].n === rr[1].n
 
   return <div className={"lv-pane lv-diya-pane" + (controlsVisible ? "" : " lv-controls-hidden")}>
     <div ref={scrollRef} className="lv-diya-scroll" onScroll={e => {
@@ -160,7 +231,7 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
           onPointerCancel={() => { pointerStart.current = null }} />
       </div>
     </div>
-    <div className="lv-cap"><span className="lv-eye">{mine ? 'TAP EACH DIYA TO LIGHT OR EXTINGUISH IT' : couple ? 'TAP A PARTNER DIYA TO TOGGLE ITS FLAME' : 'TAP ONE LIT DIYA TO EXTINGUISH ONLY THAT ONE'}</span><h2>Diya <em>World</em></h2><p>{fmt(lit)} lit · {mine ? 'your board' : viewName + "'s board"}</p></div>
+    <div className="lv-cap"><span className="lv-eye">{mine ? 'TAP · BLOW INTO MIC · TILT PHONE FOR WIND' : couple ? 'TAP PARTNER DIYA' : 'TAP LIT DIYA TO BLOW OUT'}</span><h2>Diya <em>World</em></h2><p>{fmt(lit)} lit · {mine ? 'your board' : viewName + "'s board"}</p></div>
 
     <button className="lv-controls-toggle" onClick={() => setControlsVisible(v => !v)} aria-expanded={controlsVisible}>{controlsVisible ? "Hide controls" : "Show controls"}</button>
     <div className="lv-score">
@@ -176,12 +247,18 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
       {users.length > 1 && <div className="lv-switch">{ranked.map(u => <button key={u.id} className={'lv-chipbtn' + (u.id === view ? ' on' : '')} onClick={() => setView(u.id)}>{u.id === me ? 'My diyas' : u.name + "'s diyas"} · {fmt(u.lit)}</button>)}</div>}
       <div className="lv-pager">
         <button className="lv-btn" disabled={pg <= 0} onClick={() => setPage(pg - 1)}>‹</button>
-        <span>Scroll diyas · Page {fmt(pg + 1)} / {fmt(pages)}</span>
+        <span>Page {fmt(pg + 1)} / {fmt(pages)}</span>
         <button className="lv-btn" disabled={pg >= pages - 1} onClick={() => setPage(pg + 1)}>›</button>
         <input className="lv-mini" inputMode="numeric" placeholder="go to page" value={jump} onChange={e => setJump(e.target.value.replace(/[^0-9]/g, '').slice(0, 12))} onKeyDown={e => { if (e.key === 'Enter' && jump) { setPage(Math.max(0, Math.min(pages - 1, Number(jump) - 1))); setJump('') } }} />
         <button className="lv-btn" onClick={() => setPage(front)}>latest</button>
       </div>
       <div className="lv-flame-picker"><span>Flame</span>{[['natural','🟠','Natural'],['rainbow','🌈','Rainbow'],['blue','🔵','Blue'],['pink','💗','Pink'],['green','🟢','Green'],['violet','🟣','Violet']].map(([id,emoji,label])=><button key={id} title={label} className={flame===id?'on':''} disabled={!mine && !couple} onClick={()=>act.flame(view,id)}>{emoji}</button>)}</div>
+
+      {mine && <div className="lv-bulk" style={{gap:8}}>
+        <button className={'lv-btn' + (micOn ? ' gold on' : '')} onClick={() => setMicOn(v => !v)} title="Blow into mic to extinguish latest diya">{micOn ? '🎤 Mic ON – Blow to extinguish' : '🎤 Enable Mic Blow'}</button>
+        {Math.abs(wind) > 0.15 && <span style={{fontSize:12, color:'#e8b95c'}}>💨 Wind {wind > 0 ? '→' : '←'} {Math.abs(wind).toFixed(1)}</span>}
+      </div>}
+
       {mine ? <div className="lv-bulk">
         <input inputMode="numeric" placeholder="type any number, e.g. 500" value={bulk} disabled={!free} onChange={e => setBulk(e.target.value.replace(/[^0-9]/g, '').slice(0, 13))} />
         <button className="lv-btn gold" disabled={!free || !n} onClick={() => act.add(n)}>Light +{fmt(n)}</button>
@@ -195,16 +272,12 @@ export default function DiyaBoard({ users, players, me, online, live, couple = f
           <button className="lv-btn gold" disabled={!n || !live} onClick={() => act.partnerAdd(view, n)}>🪔 Light +{fmt(n)}</button>
           <button className="lv-btn" disabled={!bulk || !live} onClick={() => act.partnerSet(view, n)}>Set total</button>
           {[1, 10, 100, 1000].map(v => <button key={v} className="lv-btn" disabled={!live} onClick={() => act.partnerAdd(view, v)}>+{fmt(v)}</button>)}
-          <button className="lv-btn" disabled={!live} onClick={() => act.partnerSet(view, (pg + 1) * PER_PAGE)}>Light this page</button>
         </>}
         <button className="lv-btn" disabled={coolUi || !lit} onClick={() => puff(Math.max(0, extent - 1), 400)}>💨 Blow 1</button>
         <button className="lv-btn" disabled={coolUi || !lit} onClick={() => { for(let k=0;k<10;k++){const i=Math.max(0,extent-1-k);if(isOn(board,i))act.diya(view,i,'blow')} }}>💨 Blow 10</button>
-        <button className="lv-btn" disabled={coolUi || !lit} onClick={() => { for(let k=0;k<100;k++){const i=Math.max(0,extent-1-k);if(isOn(board,i))act.diya(view,i,'blow')} }}>💨 Blow 100</button>
         <button className="lv-btn gold" disabled={coolUi || !lit} onClick={() => act.blow(view, 0, true, viewName)}>🌬️ Blow all</button>
         <button className="lv-btn" onClick={() => { setBulk(""); setView(me) }}>back to mine</button>
       </div>}
     </div>
-
-
   </div>
 }
